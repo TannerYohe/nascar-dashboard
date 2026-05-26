@@ -18,8 +18,8 @@ classifiers = [
 dependencies = [
 
 ]
-license = {text = "GPL-3.0-or-later"}
+license = {text = "MIT"}
 
 [project.urls]
-Homepage = "https://github.com/TannerYohe/NascarDashboard"
-Issues = "https://github.com/TannerYohe/NascarDashboard/issues"
+Homepage = "https://github.com/TannerYohe/nascar-dashboard"
+Issues = "https://github.com/TannerYohe/nascar-dashboard/issues"
