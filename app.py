@@ -2,7 +2,7 @@ from shiny import render, ui, reactive
 from shiny.express import input
 import duckdb as db
 import pandas as pd
-from util import get_series_str
+from etl.util import get_series_str
 
 con = db.read_parquet("data/races/**/*.parquet", hive_partitioning=True, union_by_name=True)
 ui.panel_title("Race Rewind")
