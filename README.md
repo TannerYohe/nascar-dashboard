@@ -1,32 +1,104 @@
-# NASCAR Dashboard
+# Race Rewind
 
-> **Work in Progress** — This project is under active development. Features and APIs may change.
+> **Work in progress.** The replay screen is the first page; more are coming.
 
-A dashboard and ETL pipeline for collecting and visualizing NASCAR race data.
+A web app for replaying NASCAR races. Pick a season, series and race, then watch the field run lap by lap on a map of the track, with:
 
-## Overview
+- the flag state, lap, stage, and laps to go
+- the running order, with gap to the leader or interval to the car ahead, last and best lap times, and pit stop counts
+- penalties as they're given and when they're served
+- every pit stop, with tires changed, time on pit road, and positions gained or lost
+- a race feed of cautions, lead changes, stage results and lap notes
+- playback at 0.25× to 64×, lap stepping, and a scrubber marked with cautions, stage ends and penalties
+- car filters by driver, team, manufacturer or the current top 10, hiding or dimming the rest
 
-This project has two components:
+The data comes from the `nascar` schema on Aurora DSQL, which the [cadence](https://github.com/TannerYohe/cadence) repo loads. This app only reads it.
 
-- **Dashboard** (WIP) — A [Shiny for Python](https://shiny.posit.co/py/) web app for exploring NASCAR race data interactively. Select a season, series, and race to view detailed race information.
-- **ETL** — A data pipeline that pulls race data from the NASCAR API (via [nascar-api](https://github.com/TannerYohe/nascar-api)) and loads it into a SQLite database using SQLAlchemy.
+## How the replay works
 
-## Project Structure
+The data has lap times, not live positions. Summing each car's lap times gives the moment it crossed the line on every lap, and the replay moves each car around the track between crossings. The running order and gaps come from those crossings, the same way timing and scoring works, so positions change at the line. A car is drawn on pit road between its pit-in and pit-out times.
+
+Penalties come from the official infraction records when present. They're also read out of the lap notes ("#34 penalized for pit road speeding", "#23 serves his stop and go penalty"), since the official records are often empty. A penalty is marked served when a note says so. Otherwise the app infers it: a penalty given under caution is served at the next restart, and one given under green is matched to the car's next stop with no tire change within 5 laps. When nothing matches, the penalty shows as "serving not recorded".
+
+## Layout
 
 ```
-├── app.py              # Shiny dashboard entry point
-├── etl/
-│   ├── main.py         # ETL entry point
-│   ├── model_to_orm.py # API model to ORM mapping
-│   ├── util.py         # Shared utilities
-│   └── orm/            # SQLAlchemy models
-├── pyproject.toml
-└── data/               # Parquet data files (not tracked)
+backend/          FastAPI API (Python 3.14, uv)
+  src/nascar_dashboard/
+    models.py       read-only models of the cadence tables
+    services/       race listings, replay bundle, flag timeline, penalty parsing
+    routes/         /api/seasons, /api/races, /api/races/{id}, /api/races/{id}/replay
+  scripts/seed_dev_db.py   load races from the public NASCAR feed into SQLite
+  tests/
+frontend/         React + TypeScript (Vite, Tailwind, TanStack Query, zustand)
+  src/features/replay/     replay screen; engine/ is the timing model (unit tested)
+  src/features/picker/     race browser and Ctrl-K search
+  public/tracks/           track layouts, generated from OpenStreetMap
+scripts/tracks/   builds the track layouts (tracks.toml + build_tracks.py)
 ```
 
-## Requirements
+## Running locally
 
-- Python 3.11+
+You need [uv](https://docs.astral.sh/uv/) and Node 22+.
+
+### Against DSQL
+
+The API connects as a read-only role. Create it once in the cluster (as an admin):
+
+```sql
+CREATE ROLE dashboard_reader WITH LOGIN;
+AWS IAM GRANT dashboard_reader TO 'arn:aws:iam::<account>:role/<your-role>';
+GRANT USAGE ON SCHEMA nascar TO dashboard_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA nascar TO dashboard_reader;
+```
+
+Your IAM principal also needs `dsql:DbConnect` on the cluster. Then:
+
+```sh
+cd backend
+uv sync
+export DSQL_ENDPOINT=<cluster-id>.dsql.<region>.on.aws AWS_REGION=<region>   # or put them in backend/.env
+uv run fastapi dev src/nascar_dashboard/main.py
+```
+
+### Without DSQL
+
+Seed a local SQLite file from the public NASCAR feed and point the API at it:
+
+```sh
+cd backend
+uv run --group seed python scripts/seed_dev_db.py --db dev.db --year 2025 --series 1 --latest 5
+DATABASE_URL=sqlite:///dev.db uv run fastapi dev src/nascar_dashboard/main.py
+```
+
+### The UI
+
+```sh
+cd frontend
+npm install
+npm run dev        # http://localhost:5173, proxies /api to :8000
+```
+
+`/replay/<race_id>?lap=120` opens a race at a given lap.
+
+Keyboard shortcuts on the replay: Space play/pause · ←/→ previous/next lap (Shift for 10) · `[` `]` slower/faster · Home restart · Ctrl/⌘-K search races.
+
+## Tests
+
+```sh
+cd backend && uv run pytest && uv run ruff check && uv run ty check src
+cd frontend && npm test && npx tsc -b
+```
+
+## Track maps
+
+`python scripts/tracks/build_tracks.py` rebuilds the layouts. For each track in `scripts/tracks/tracks.toml` it fetches the `highway=raceway` ways around the venue from OpenStreetMap. It joins them into a graph and takes the loop closest to each lap length raced there, so one venue can have an oval and a road course. Start/finish goes beside the middle of pit road unless the manifest gives it. Add `--sheet out.html` to get a page that shows every layout with its start/finish line and race direction, for checking. A track with no layout (temporary street courses, dirt tracks) falls back to a generic oval.
+
+Map data © OpenStreetMap contributors, available under the [ODbL](https://www.openstreetmap.org/copyright).
+
+## Deployment
+
+The plan is AWS serverless, like cadence: the API on Lambda behind a Function URL or API Gateway, and the built UI on S3 + CloudFront. The API holds no state beyond an in-process cache of finished-race bundles, so it runs unchanged on Lambda. It's not set up yet.
 
 ## License
 
