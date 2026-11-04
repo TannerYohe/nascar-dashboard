@@ -1,0 +1,162 @@
+import { clsx } from 'clsx'
+import { Eye, EyeOff, Flag } from 'lucide-react'
+import { useState } from 'react'
+
+import { cleanName, gap, lapTime, surname } from '../../lib/format'
+import { makeColor } from '../../lib/racing'
+import type { RaceModel } from './engine/model'
+import type { StandingRow } from './engine/snapshot'
+import { useReplayStore } from './store'
+
+interface Props {
+  model: RaceModel
+  rows: StandingRow[]
+  t: number
+}
+
+export function CarChip({ label, make, small }: { label: string; make: string | null; small?: boolean }) {
+  return (
+    <span
+      className={clsx(
+        'tabular inline-grid shrink-0 place-items-center rounded font-mono font-bold text-black/85',
+        small ? 'h-5 min-w-6 px-1 text-[11px]' : 'h-6 min-w-8 px-1 text-xs',
+      )}
+      style={{ background: makeColor(make), color: make === 'Chevrolet' ? '#1a1300' : '#fff' }}
+    >
+      {label}
+    </span>
+  )
+}
+
+export function Leaderboard({ model, rows, t }: Props) {
+  const [mode, setMode] = useState<'gap' | 'interval'>('gap')
+  const hidden = useReplayStore((s) => s.hidden)
+  const filterMode = useReplayStore((s) => s.filterMode)
+  const selected = useReplayStore((s) => s.selected)
+  const hovered = useReplayStore((s) => s.hovered)
+  const { select, hover, toggleHidden } = useReplayStore.getState()
+
+  const activePenalty = (car: number | null) =>
+    car != null &&
+    model.penalties.some(
+      (p) => p.penalty.car_number === car && p.given <= t && (p.served == null || p.served > t) && p.given > 0,
+    )
+
+  const visibleRows = filterMode === 'hide' ? rows.filter((r) => !hidden.has(r.frame.car.driverId)) : rows
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="grid grid-cols-[1.75rem_1.6rem_2.25rem_minmax(0,1fr)_4.25rem_4rem_1rem_1rem] items-center gap-x-1.5 border-b border-line px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-faint">
+        <span className="text-right">Pos</span>
+        <span />
+        <span>Car</span>
+        <span>Driver</span>
+        <button
+          type="button"
+          onClick={() => setMode(mode === 'gap' ? 'interval' : 'gap')}
+          className="rounded text-right uppercase tracking-wider transition hover:text-ink"
+          title="Switch between gap to leader and interval to the car ahead"
+        >
+          {mode === 'gap' ? 'Gap' : 'Int'} ⇄
+        </button>
+        <span className="text-right">Last</span>
+        <span className="text-center" title="Pit stops">P</span>
+        <span />
+      </div>
+      <ol className="flex-1 overflow-y-auto py-1" aria-label="Running order">
+        {visibleRows.map((row) => {
+          const { car, status } = row.frame
+          const isHidden = hidden.has(car.driverId)
+          const isSel = selected === car.driverId
+          const out = status === 'out'
+          const delta = row.positionsGained
+          const penalty = activePenalty(car.car)
+          return (
+            <li
+              key={car.driverId}
+              onPointerEnter={() => hover(car.driverId)}
+              onPointerLeave={() => hover(null)}
+              onClick={() => select(car.driverId)}
+              className={clsx(
+                'group grid cursor-pointer grid-cols-[1.75rem_1.6rem_2.25rem_minmax(0,1fr)_4.25rem_4rem_1rem_1rem] items-center gap-x-1.5 px-3 py-[3px] text-[13px] transition',
+                isSel ? 'bg-raised ring-1 ring-inset ring-line-strong' : hovered === car.driverId ? 'bg-hover/60' : '',
+                (out || (isHidden && filterMode === 'dim')) && 'opacity-45',
+              )}
+            >
+              <span className="tabular text-right font-mono font-semibold text-muted">{row.position}</span>
+              <span
+                className={clsx(
+                  'tabular text-center font-mono text-[10px]',
+                  delta == null || delta === 0 ? 'text-faint' : delta > 0 ? 'text-best-personal' : 'text-flag-red',
+                )}
+                title={car.startPos ? `Started ${car.startPos}` : undefined}
+              >
+                {delta == null || delta === 0 ? '·' : delta > 0 ? `▲${delta}` : `▼${-delta}`}
+              </span>
+              <CarChip label={car.label} make={car.make} />
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate font-medium" title={cleanName(car.name)}>
+                  {surname(car.name)}
+                </span>
+                {status === 'pit' && (
+                  <span className="rounded bg-sky-500/20 px-1 text-[10px] font-bold text-sky-300">PIT</span>
+                )}
+                {penalty && (
+                  <Flag size={12} className="shrink-0 text-orange-400" aria-label="Penalty pending" />
+                )}
+              </span>
+              <span className="tabular text-right font-mono text-xs text-muted">
+                {out ? (
+                  <span className="text-flag-red/80">OUT</span>
+                ) : row.position === 1 ? (
+                  <span className="text-faint">Leader</span>
+                ) : mode === 'gap' ? (
+                  gap(row.gap, row.lapsDown)
+                ) : (
+                  gap(row.interval, row.intervalLapsDown)
+                )}
+              </span>
+              <span
+                className={clsx(
+                  'tabular text-right font-mono text-xs',
+                  row.lastIsOverallBest
+                    ? 'text-best-overall'
+                    : row.lastIsPersonalBest
+                      ? 'text-best-personal'
+                      : 'text-muted',
+                )}
+                title={row.bestLap ? `Best ${lapTime(row.bestLap)}` : undefined}
+              >
+                {out ? `L${row.frame.laps}` : lapTime(row.lastLap)}
+              </span>
+              <span className="tabular text-center font-mono text-xs text-faint">{row.pitCount || ''}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleHidden(car.driverId)
+                }}
+                aria-label={isHidden ? `Show #${car.label}` : `Hide #${car.label}`}
+                className={clsx(
+                  'grid place-items-center rounded text-faint transition hover:text-ink',
+                  isHidden ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100',
+                )}
+              >
+                {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+      <div className="flex gap-3 border-t border-line px-3 pt-2 text-[10px] text-faint">
+        <span>
+          <span className="text-best-overall">■</span> fastest lap
+        </span>
+        <span>
+          <span className="text-best-personal">■</span> personal best
+        </span>
+        <span className="ml-auto">Gaps derived from lap times</span>
+      </div>
+    </div>
+  )
+}
