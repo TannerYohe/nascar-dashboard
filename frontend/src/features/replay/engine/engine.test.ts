@@ -1,0 +1,223 @@
+import { describe, expect, it } from 'vitest'
+
+import type { ReplayBundle, ReplayDriver } from '../../../api/types'
+import { buildModel, lapMidTime, lastAtOrBefore } from './model'
+import { frameAt, lapsAt, progressAt, raceStateAt, standingsAt } from './snapshot'
+
+function driver(id: number, car: number, start: number, finish: number, make = 'Ford'): ReplayDriver {
+  return {
+    driver_id: id,
+    car_number: car,
+    name: `Driver ${car}`,
+    manufacturer: make,
+    team: null,
+    sponsor: null,
+    start_pos: start,
+    finish_pos: finish,
+    finishing_status: 'Running',
+    laps_led: null,
+  }
+}
+
+function bundle(overrides: Partial<ReplayBundle> = {}): ReplayBundle {
+  return {
+    race: {
+      race_id: 1,
+      series_id: 1,
+      season: 2025,
+      race_name: 'Test',
+      track_id: 1,
+      track_name: 'Test',
+      race_date: null,
+      round: 1,
+      is_exhibition: false,
+      playoff_round: null,
+      scheduled_laps: 4,
+      actual_laps: 4,
+      winner: null,
+      has_lap_data: true,
+      status: 'finished',
+      stage_ends: [2, 4],
+      track_length_mi: 1.5,
+      scheduled_distance: 6,
+      number_of_cautions: 0,
+      number_of_caution_laps: 0,
+      number_of_lead_changes: 0,
+      number_of_leaders: 1,
+      average_speed: null,
+      margin_of_victory: null,
+      total_race_time: null,
+      television_broadcaster: null,
+    },
+    finished: true,
+    from_lap: 0,
+    // Car 1 leads every lap; car 2 is a second back; car 3 drops out after lap 2;
+    // car 4 is a lap down by the end.
+    drivers: [driver(1, 1, 2, 1), driver(2, 2, 1, 2), driver(3, 3, 3, 4), driver(4, 4, 4, 3)],
+    laps: [
+      { driver_id: 1, times: [null, 30, 30, 30, 30], positions: [2, 1, 1, 1, 1] },
+      { driver_id: 2, times: [null, 31, 30, 30, 30], positions: [1, 2, 2, 2, 2] },
+      { driver_id: 3, times: [null, 32, null, null], positions: [3, 3, 3] },
+      { driver_id: 4, times: [null, 40, 40, 40], positions: [4, 4, 4, 4] },
+    ],
+    lap_flags: [1, 1, 2, 1, 4],
+    cautions: [],
+    leaders: [],
+    pit_stops: [],
+    penalties: [],
+    notes: [],
+    stage_results: [],
+    ...overrides,
+  }
+}
+
+describe('lastAtOrBefore', () => {
+  it('finds the last index at or before t', () => {
+    expect(lastAtOrBefore([0, 10, 20], -1)).toBe(-1)
+    expect(lastAtOrBefore([0, 10, 20], 0)).toBe(0)
+    expect(lastAtOrBefore([0, 10, 20], 15)).toBe(1)
+    expect(lastAtOrBefore([0, 10, 20], 99)).toBe(2)
+  })
+})
+
+describe('buildModel', () => {
+  const model = buildModel(bundle())
+
+  it('sums lap times into line crossings', () => {
+    expect(model.byCar.get(1)!.cross).toEqual([0, 30, 60, 90, 120])
+    expect(model.byCar.get(4)!.cross).toEqual([0, 40, 80, 120])
+  })
+
+  it('fills a missing lap time from the field and stops at the last recorded lap', () => {
+    const car3 = model.byCar.get(3)!
+    // Lap 2 has no time but no later lap has one either, so the car stopped at lap 1.
+    expect(car3.lastLap).toBe(1)
+  })
+
+  it('fills gaps in the middle of a run with the median of the field', () => {
+    const m = buildModel(
+      bundle({
+        laps: [
+          { driver_id: 1, times: [null, 30, null, 30], positions: [] },
+          { driver_id: 2, times: [null, 31, 32, 30], positions: [] },
+          { driver_id: 3, times: [null, 32, 34, 30], positions: [] },
+          { driver_id: 4, times: [null, 40, 40, 40], positions: [] },
+        ],
+      }),
+    )
+    expect(m.byCar.get(1)!.times[2]).toBe(34) // median of 32, 34, 40
+  })
+
+  it('tracks the leader crossing each lap', () => {
+    expect(model.leaderCross).toEqual([0, 30, 60, 90, 120])
+    expect(model.finishTime).toBe(120)
+  })
+
+  it('places notes midway through the leader lap', () => {
+    expect(lapMidTime(model, 2)).toBe(45)
+  })
+})
+
+describe('positions over time', () => {
+  const model = buildModel(bundle())
+  const car1 = model.byCar.get(1)!
+  const car2 = model.byCar.get(2)!
+
+  it('interpolates within a lap', () => {
+    expect(lapsAt(car1, 45)).toBe(1)
+    expect(progressAt(car1, 45)).toBeCloseTo(1.5)
+  })
+
+  it('starts the grid behind the line and reaches it on the first crossing', () => {
+    expect(progressAt(car2, 0)).toBe(0) // pole sits on the line
+    expect(progressAt(car1, 0)).toBe(0) // front row, outside lane
+    const car4 = model.byCar.get(4)!
+    expect(progressAt(car4, 0)).toBeLessThan(0) // second row
+    expect(progressAt(car4, 40)).toBe(1)
+  })
+
+  it('marks cars out after their last lap and finished after the checkered', () => {
+    expect(frameAt(model.byCar.get(3)!, 50, model.finishTime).status).toBe('out')
+    expect(frameAt(car1, 121, model.finishTime).status).toBe('finished')
+    expect(frameAt(model.byCar.get(4)!, 125, model.finishTime).status).toBe('finished')
+  })
+
+  it('shows the pit window', () => {
+    const m = buildModel(
+      bundle({
+        pit_stops: [
+          {
+            car_number: 2,
+            driver_name: null,
+            lap: 2,
+            leader_lap: 2,
+            in_time: 70,
+            out_time: 80,
+            box_in_time: null,
+            box_out_time: null,
+            stop_duration: null,
+            total_duration: 10,
+            stop_type: 'OTHER',
+            tires: [],
+            in_flag: 1,
+            out_flag: 1,
+            in_rank: null,
+            out_rank: null,
+            positions_gained: null,
+            infraction: null,
+          },
+        ],
+      }),
+    )
+    const f = frameAt(m.byCar.get(2)!, 75, m.finishTime)
+    expect(f.status).toBe('pit')
+    expect(f.pitFraction).toBeCloseTo(0.5)
+  })
+})
+
+describe('standings', () => {
+  const model = buildModel(bundle())
+
+  it('orders by laps then line crossing, and measures gaps at the line', () => {
+    // Car 3 retired after lap 1 (crossed at 32) and stays ahead of car 4 (on
+    // lap 1 at 40) until car 4 completes lap 2 at 80.
+    expect(standingsAt(model, 65).map((r) => r.frame.car.car)).toEqual([1, 2, 3, 4])
+    const rows = standingsAt(model, 85)
+    expect(rows.map((r) => r.frame.car.car)).toEqual([1, 2, 4, 3])
+    expect(rows[1].gap).toBe(1) // car 2 crossed lap 2 at 61 vs 60
+    expect(rows[1].interval).toBe(1)
+  })
+
+  it('never reports a negative gap', () => {
+    for (let t = 1; t < model.duration; t += 0.5) {
+      for (const r of standingsAt(model, t)) {
+        if (r.gap != null) expect(r.gap).toBeGreaterThanOrEqual(0)
+        if (r.interval != null) expect(r.interval).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('reports laps down', () => {
+    const rows = standingsAt(model, 125)
+    const car4 = rows.find((r) => r.frame.car.car === 4)!
+    expect(car4.lapsDown).toBe(1)
+    expect(rows.map((r) => r.frame.car.car)).toEqual([1, 2, 4, 3])
+  })
+
+  it('highlights best laps', () => {
+    const rows = standingsAt(model, 95)
+    const car1 = rows[0]
+    expect(car1.lastLap).toBe(30)
+    expect(car1.lastIsOverallBest).toBe(true)
+  })
+})
+
+describe('race state', () => {
+  const model = buildModel(bundle())
+
+  it('reports lap, flag and stage', () => {
+    expect(raceStateAt(model, 45)).toMatchObject({ lap: 2, flag: 2, stage: 1, lapsToGo: 3 })
+    expect(raceStateAt(model, 95)).toMatchObject({ lap: 4, flag: 4, stage: 2 })
+    expect(raceStateAt(model, 130)).toMatchObject({ finished: true, flag: 5, lapsToGo: 0 })
+  })
+})
