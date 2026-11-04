@@ -214,6 +214,7 @@ def find_loop(
         pts = [g.xy[n] for n in nodes]
         roundness = 4 * math.pi * abs(signed_area(pts)) / (length * length)
         return err + OVAL_SHAPE_WEIGHT * (1 - roundness)
+
     limit = target * (1 + MAX_ERROR)
 
     def end(seg: int, fwd: bool) -> int:
@@ -411,17 +412,17 @@ def build_variant(g: Graph, spec: dict, target_mi: float, proj) -> dict | None:
 
     pit_window = [0.06, 0.06]
     if pit:
-        # Orient pit road entry -> exit in race direction, and measure how far
-        # it reaches before and after the line.
+        # Orient pit road entry -> exit in race direction. Pit road runs a
+        # short way *forward* along the track from its entry to its exit, so
+        # if going forward from pit[0] to pit[-1] is most of a lap, it's backwards.
         f0 = loop_fraction(loop, cum, pit[0])
         f1 = loop_fraction(loop, cum, pit[-1])
-        before0, before1 = (1 - f0) % 1, (1 - f1) % 1
-        if before1 > before0:  # pit[-1] is further back, so it's the entry
+        if (f1 - f0) % 1 > 0.5:
             pit.reverse()
             f0, f1 = f1, f0
-        before = min(0.3, (1 - f0) % 1)
-        after = min(0.3, f1 if f1 < 0.5 else 0.0)
-        pit_window = [round(before, 3), round(after, 3)]
+        # How far pit road reaches before and after the line (the line can be
+        # past the exit, as at Talladega; the app re-places it from timing data).
+        pit_window = [round((1 - f0) % 1, 3), round(f1 if f1 < 0.5 else 0.0, 3)]
 
     # Fit to the viewBox, north up (SVG y grows downward).
     every = loop + (pit or [])
@@ -489,7 +490,11 @@ def contact_sheet(layouts: list[dict], path: Path) -> None:
                 f'<figure><svg viewBox="{-pad} {-pad} {w + 2 * pad} {h + 2 * pad}">'
                 f'<path d="{v["path"]}" fill="none" stroke="#888" stroke-width="10"/>'
                 + (
-                    f'<path d="{v["pit"]}" fill="none" stroke="#38bdf8" stroke-width="5"/>'
+                    f'<path id="q{t["track_id"]}{v["length_mi"]}" d="{v["pit"]}" fill="none" '
+                    'stroke="#38bdf8" stroke-width="5"/>'
+                    '<circle r="12" fill="#38bdf8">'
+                    '<animateMotion dur="3s" repeatCount="indefinite">'
+                    f'<mpath href="#q{t["track_id"]}{v["length_mi"]}"/></animateMotion></circle>'
                     if "pit" in v
                     else ""
                 )
