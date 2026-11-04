@@ -180,6 +180,8 @@ def _pit_stops(session: Session, race_id: int) -> list[PitStop]:
                 box_in_time=_measured(p.box_stop_race_time),
                 box_out_time=_measured(p.box_leave_race_time),
                 stop_duration=_measured(p.pit_stop_duration),
+                in_travel=_measured(p.in_travel_duration),
+                out_travel=_measured(p.out_travel_duration),
                 total_duration=_measured(p.total_duration),
                 stop_type=p.pit_stop_type,
                 tires=[cast(Tire, name) for name, on in changed if on],

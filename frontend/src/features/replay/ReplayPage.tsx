@@ -29,11 +29,14 @@ export function ReplayPage() {
 function Replay({ bundle }: { bundle: ReplayBundle }) {
   const model = useMemo(() => buildModel(bundle), [bundle])
   const [params] = useSearchParams()
-  // ?lap=120 opens the replay at the start of that lap.
+  // ?lap=120 opens the replay at the start of that lap; ?t=2215 at that many
+  // seconds after the green.
   const startLap = Number(params.get('lap')) || 0
+  const startT = Number(params.get('t')) || 0
 
   useEffect(() => {
-    useReplayStore.getState().reset(model.duration, startLap > 1 ? lapStartTime(model, startLap) + 0.01 : 0)
+    const start = startT > 0 ? startT : startLap > 1 ? lapStartTime(model, startLap) + 0.01 : 0
+    useReplayStore.getState().reset(model.duration, start)
     const stop = startClockLoop()
     document.title = `${bundle.race.race_name ?? 'Race'} · Race Rewind`
     return () => {

@@ -5,7 +5,8 @@ import { cleanName } from '../../lib/format'
 import type { RaceModel } from './engine/model'
 import { frameAt } from './engine/snapshot'
 import { clock, useReplayStore } from './store'
-import { buildGeometry, loadLayout, pitPoint, pointOn, type TrackGeometry } from './track'
+import { buildMotion, placementAt } from './engine/motion'
+import { alignToTiming, buildGeometry, loadLayout, pitPoint, pointOn, type TrackGeometry } from './track'
 
 interface Props {
   model: RaceModel
@@ -41,11 +42,15 @@ function Track({ model, geometry }: { model: RaceModel; geometry: TrackGeometry 
   const hover = useReplayStore((s) => s.hover)
   const select = useReplayStore((s) => s.select)
 
+  // Start/finish and pit road, lined up with this race's timing.
+  const align = useMemo(() => alignToTiming(geometry, model.pitLine), [geometry, model.pitLine])
+  const motion = useMemo(() => buildMotion(model, align), [model, align])
+
   const sf = useMemo(() => {
-    const a = pointOn(geometry.main, 0, size * 0.035)
-    const b = pointOn(geometry.main, 0, -size * 0.035)
+    const a = pointOn(geometry.main, align.line, size * 0.035)
+    const b = pointOn(geometry.main, align.line, -size * 0.035)
     return { a, b }
-  }, [geometry, size])
+  }, [geometry, size, align.line])
 
   const pitLane = useMemo(() => {
     if (layout.pit) return layout.pit
@@ -59,7 +64,8 @@ function Track({ model, geometry }: { model: RaceModel; geometry: TrackGeometry 
       const s = useReplayStore.getState()
       for (const car of model.cars) {
         const el = carRefs.current.get(car.driverId)
-        if (!el) continue
+        const m = motion.get(car.driverId)
+        if (!el || !m) continue
         const f = frameAt(car, t, model.finishTime)
         const isHidden = s.hidden.has(car.driverId)
         if ((isHidden && s.filterMode === 'hide') || f.status === 'out' || car.lastLap === 0) {
@@ -68,18 +74,25 @@ function Track({ model, geometry }: { model: RaceModel; geometry: TrackGeometry 
         }
         el.style.display = ''
         let p
-        if (f.status === 'pit') p = pitPoint(geometry, f.pitFraction)
-        else if (f.status === 'grid')
-          p = pointOn(geometry.main, f.progress, (car.gridLane ? -1 : 1) * r * 0.9)
-        else p = pointOn(geometry.main, f.lapFraction)
+        let stopped = false
+        if (f.status === 'grid') {
+          p = pointOn(geometry.main, align.line + f.progress, (car.gridLane ? -1 : 1) * r * 0.9)
+        } else {
+          const at = placementAt(m, t)
+          if (at.on === 'pit') {
+            p = pitPoint(geometry, at.progress.f)
+            stopped = at.progress.phase === 'stopped'
+          } else p = pointOn(geometry.main, align.line + at.progress)
+        }
         el.setAttribute('transform', `translate(${p.x.toFixed(2)} ${p.y.toFixed(2)})`)
+        el.dataset.stopped = stopped ? '1' : ''
         const dim = (isHidden && s.filterMode === 'dim') || f.status === 'finished'
         el.style.opacity = dim ? '0.28' : '1'
       }
     }
     draw(clock.t)
     return clock.subscribe(draw)
-  }, [model, geometry, r])
+  }, [model, geometry, r, motion, align.line])
 
   // Re-run a frame when filters change while paused.
   useEffect(() => clock.emit(), [hidden, filterMode])
@@ -142,6 +155,8 @@ function Track({ model, geometry }: { model: RaceModel; geometry: TrackGeometry 
               {(isSel || isHover) && (
                 <circle r={r * 1.55} fill="none" stroke="#fff" strokeWidth={r * 0.22} opacity={isSel ? 1 : 0.6} />
               )}
+              {/* Shown while the car is stopped in its pit box. */}
+              <circle className="stop-ring" r={r * 1.5} fill="none" stroke="#38bdf8" strokeWidth={r * 0.28} />
               <circle r={r} fill={fill} stroke="#0a0c0f" strokeWidth={r * 0.14} />
               <text
                 textAnchor="middle"

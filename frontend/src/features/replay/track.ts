@@ -112,6 +112,54 @@ export function pitPoint(g: TrackGeometry, f: number): Point {
   return pointOn(g.main, 1 - before + f * (before + after), g.size * 0.045)
 }
 
+/** The loop position (0..1 along the layout's path) closest to a point. */
+function nearestParam(s: Sampled, p: Point): number {
+  let best = 0
+  let bestD = Infinity
+  for (let i = 0; i < s.count; i++) {
+    const d = (s.points[i * 2] - p.x) ** 2 + (s.points[i * 2 + 1] - p.y) ** 2
+    if (d < bestD) {
+      bestD = d
+      best = i
+    }
+  }
+  return best / s.count
+}
+
+export interface Alignment {
+  /** Where the start/finish line is, as a position along the layout's path. */
+  line: number
+  /** Pit entry and exit, in lap fractions from the line (what the motion model wants). */
+  entry: number
+  exit: number
+}
+
+const wrap = (x: number) => ((x % 1) + 1) % 1
+
+/**
+ * Line the map up with the timing. The layout knows where pit road leaves
+ * and rejoins the track; the race's pit stops say where along pit road the
+ * line is (`pitLine`, 0 entry to 1 exit, beyond either end when the line is
+ * off pit road). Without that, the layout's own start/finish is used.
+ */
+export function alignToTiming(g: TrackGeometry, pitLine: number | null): Alignment {
+  let entryAt: number
+  let exitAt: number
+  if (g.pit) {
+    const n = g.pit.count - 1
+    entryAt = nearestParam(g.main, { x: g.pit.points[0], y: g.pit.points[1] })
+    exitAt = nearestParam(g.main, { x: g.pit.points[n * 2], y: g.pit.points[n * 2 + 1] })
+  } else {
+    const [before, after] = g.layout.pit_window ?? [0.06, 0.06]
+    entryAt = wrap(1 - before)
+    exitAt = after
+  }
+  let span = wrap(exitAt - entryAt)
+  if (span < 0.005) span = 0.1
+  const line = pitLine == null ? 0 : wrap(entryAt + pitLine * span)
+  return { line, entry: wrap(entryAt - line), exit: wrap(exitAt - line) }
+}
+
 /** public/tracks/{track_id}.json: one layout per lap length raced there. */
 interface TrackFile {
   track_id: number

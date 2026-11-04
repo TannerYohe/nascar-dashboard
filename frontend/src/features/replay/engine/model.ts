@@ -14,9 +14,100 @@ const GRID_ROW_MI = 0.006
 const DEFAULT_TRACK_MI = 1.5
 
 export interface PitWindow {
+  /** Pit road entry and exit, seconds since green. */
   start: number
   end: number
   stop: PitStop
+  /** When the car stopped in, and left, its box (null for a drive-through). */
+  boxIn: number | null
+  boxOut: number | null
+}
+
+/** Box arrival and departure, from the box timestamps or else the travel times. */
+export function boxTimes(p: PitStop, start: number, end: number): { boxIn: number | null; boxOut: number | null } {
+  const valid = (bi: number, bo: number) => bi >= start && bo <= end && bo >= bi
+  if (p.box_in_time != null && p.box_out_time != null && valid(p.box_in_time, p.box_out_time))
+    return { boxIn: p.box_in_time, boxOut: p.box_out_time }
+  if (p.in_travel != null && p.out_travel != null) {
+    const bi = start + p.in_travel
+    const bo = end - p.out_travel
+    if (valid(bi, bo)) return { boxIn: bi, boxOut: bo }
+  }
+  return { boxIn: null, boxOut: null }
+}
+
+export type PitPhase = 'in' | 'stopped' | 'out' | 'drive'
+
+export interface PitProgress {
+  phase: PitPhase
+  /** 0..1 along pit road, entry to exit. */
+  f: number
+  /** Seconds stopped so far (0 unless stopped or past the box). */
+  stopped: number
+}
+
+/**
+ * Where a car is on pit road at time t: driving to its box at a steady
+ * speed, stopped, then driving to the exit. The box position along pit road
+ * comes from the split between the drive in and the drive out.
+ */
+export function pitProgress(w: PitWindow, t: number): PitProgress {
+  const span = Math.max(0.001, w.end - w.start)
+  if (w.boxIn == null || w.boxOut == null) {
+    return { phase: 'drive', f: clamp01((t - w.start) / span), stopped: 0 }
+  }
+  const driveIn = w.boxIn - w.start
+  const driveOut = w.end - w.boxOut
+  const box = driveIn + driveOut > 0 ? driveIn / (driveIn + driveOut) : 0.5
+  if (t < w.boxIn) return { phase: 'in', f: driveIn > 0 ? box * clamp01((t - w.start) / driveIn) : box, stopped: 0 }
+  if (t <= w.boxOut) return { phase: 'stopped', f: box, stopped: t - w.boxIn }
+  return {
+    phase: 'out',
+    f: box + (1 - box) * (driveOut > 0 ? clamp01((t - w.boxOut) / driveOut) : 1),
+    stopped: w.boxOut - w.boxIn,
+  }
+}
+
+function clamp01(x: number): number {
+  return Math.max(0, Math.min(1, x))
+}
+
+/** Seconds a car spends moving on pit road (the window less the stop). */
+export function pitMovingTime(w: PitWindow): number {
+  const stopped = w.boxIn != null && w.boxOut != null ? w.boxOut - w.boxIn : 0
+  return Math.max(1, w.end - w.start - stopped)
+}
+
+/**
+ * Where cars cross the start/finish line relative to pit road, as a fraction
+ * of pit road's length: a median over every stop. A car crossing on pit road
+ * gives its share of the moving time done by then; one crossing just after
+ * the exit (or just before the entry) gives how far beyond, in the same units.
+ */
+export function pitLineFraction(cars: CarModel[]): number | null {
+  const samples: number[] = []
+  for (const car of cars) {
+    for (const w of car.pits) {
+      const moving = pitMovingTime(w)
+      if (moving < 3) continue
+      const i = lastAtOrBefore(car.cross, w.end)
+      const inside = i >= 1 && car.cross[i] >= w.start ? car.cross[i] : null
+      if (inside != null) {
+        let stoppedBefore = 0
+        if (w.boxIn != null && w.boxOut != null) stoppedBefore = Math.max(0, Math.min(inside, w.boxOut) - w.boxIn)
+        samples.push((inside - w.start - stoppedBefore) / moving)
+        continue
+      }
+      const next = car.cross[i + 1]
+      const prev = i >= 1 ? car.cross[i] : null
+      const lap = car.times[i + 1] ?? 60
+      // Only crossings close to pit road say anything about where the line is.
+      if (next != null && next - w.end < lap * 0.25) samples.push(1 + (next - w.end) / moving)
+      else if (prev != null && w.start - prev < lap * 0.25) samples.push(-(w.start - prev) / moving)
+    }
+  }
+  if (samples.length < 5) return null
+  return median(samples)
 }
 
 export interface CarModel {
@@ -84,6 +175,15 @@ export interface RaceModel {
   cautions: Caution[]
   events: RaceEvent[]
   penalties: PenaltyTiming[]
+  /** Median lap time across the field, index = lap. */
+  fieldLapTime: (number | null)[]
+  /**
+   * Where the start/finish line sits along pit road, measured from this
+   * race's timing: 0 at pit entry, 1 at pit exit, beyond either end when the
+   * line is off pit road (at Talladega it's past the exit). Null without
+   * enough pit stops to tell.
+   */
+  pitLine: number | null
 }
 
 function median(values: number[]): number | null {
@@ -181,14 +281,14 @@ export function buildModel(bundle: ReplayBundle): RaceModel {
       // Stops logged before the green (in_time 0) or after the car's last lap
       // (the cool-down) aren't part of the race.
       .filter((p) => p.in_time > 0 && p.in_time < end)
-      .map((p) => ({
-        start: p.in_time,
-        end:
+      .map((p) => {
+        const start = p.in_time
+        const end =
           p.out_time && p.out_time > p.in_time
             ? p.out_time
-            : p.in_time + (p.total_duration && p.total_duration > 0 ? p.total_duration : 30),
-        stop: p,
-      }))
+            : p.in_time + (p.total_duration && p.total_duration > 0 ? p.total_duration : 30)
+        return { start, end, stop: p, ...boxTimes(p, start, end) }
+      })
 
     return {
       driverId: d.driver_id,
@@ -241,7 +341,10 @@ export function buildModel(bundle: ReplayBundle): RaceModel {
     cautions: bundle.cautions,
     events: [],
     penalties: [],
+    fieldLapTime: lapMedian,
+    pitLine: null,
   }
+  model.pitLine = pitLineFraction(cars)
   model.events = buildEvents(model, bundle)
   const eventTime = new Map(model.events.map((e) => [e.id, e.t]))
   model.penalties = bundle.penalties.map((p) => ({

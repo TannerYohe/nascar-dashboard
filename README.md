@@ -16,7 +16,9 @@ The data comes from the `nascar` schema on Aurora DSQL, which the [cadence](http
 
 ## How the replay works
 
-The data has lap times, not live positions. Summing each car's lap times gives the moment it crossed the line on every lap, and the replay moves each car around the track between crossings. The running order and gaps come from those crossings, the same way timing and scoring works, so positions change at the line. A car is drawn on pit road between its pit-in and pit-out times.
+The data has lap times, not live positions. Summing each car's lap times gives the moment it crossed the line on every lap, and the replay moves each car around the track between crossings. The running order and gaps come from those crossings, the same way timing and scoring works, so positions change at the line.
+
+Pit stops are drawn from the pit data. On an in-lap the car runs at its normal pace, then brakes onto pit road at the pit-in time. On pit road it drives to its box, sits there for the stop, and drives to the exit at the pit-out time. On the out-lap it accelerates back up to speed. Where the start/finish line is comes from each race's own timing: where cars cross the line relative to pit road (mid pit road at Martinsville, past pit exit at Talladega).
 
 Penalties come from the official infraction records when present. They're also read out of the lap notes ("#34 penalized for pit road speeding", "#23 serves his stop and go penalty"), since the official records are often empty. A penalty is marked served when a note says so. Otherwise the app infers it: a penalty given under caution is served at the next restart, and one given under green is matched to the car's next stop with no tire change within 5 laps. When nothing matches, the penalty shows as "serving not recorded".
 
@@ -92,7 +94,7 @@ cd frontend && npm test && npx tsc -b
 
 ## Track maps
 
-`python scripts/tracks/build_tracks.py` rebuilds the layouts. For each track in `scripts/tracks/tracks.toml` it fetches the `highway=raceway` ways around the venue from OpenStreetMap. It joins them into a graph and takes the loop closest to each lap length raced there, so one venue can have an oval and a road course. Start/finish goes beside the middle of pit road unless the manifest gives it. Add `--sheet out.html` to get a page that shows every layout with its start/finish line and race direction, for checking. A track with no layout (temporary street courses, dirt tracks) falls back to a generic oval.
+`python scripts/tracks/build_tracks.py` rebuilds the layouts. For each track in `scripts/tracks/tracks.toml` it fetches the `highway=raceway` ways around the venue from OpenStreetMap. It joins them into a graph and takes the loop closest to each lap length raced there, so one venue can have an oval and a road course. The map's start/finish defaults to beside the middle of pit road. The app moves it to where the race's timing puts it. Add `--sheet out.html` to get a page that shows every layout with its start/finish line and race direction, for checking. A track with no layout (temporary street courses, dirt tracks) falls back to a generic oval.
 
 Map data © OpenStreetMap contributors, available under the [ODbL](https://www.openstreetmap.org/copyright).
 

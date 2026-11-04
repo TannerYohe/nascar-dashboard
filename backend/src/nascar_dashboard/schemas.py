@@ -105,7 +105,11 @@ class PitStop(BaseModel):
     out_time: float | None
     box_in_time: float | None
     box_out_time: float | None
+    # Seconds stopped in the box, driving down pit road to it, and from it to
+    # the exit. total_duration is entry to exit.
     stop_duration: float | None
+    in_travel: float | None
+    out_travel: float | None
     total_duration: float | None
     stop_type: str | None
     tires: list[Literal["LF", "RF", "LR", "RR"]]

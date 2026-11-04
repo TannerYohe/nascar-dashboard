@@ -86,3 +86,11 @@ input[type='range'].scrubber::-moz-range-track {
   height: 4px;
   background: transparent;
 }
+
+/* Pit-box ring on a car, switched on by TrackView while the car is stopped. */
+.stop-ring {
+  display: none;
+}
+[data-stopped='1'] > .stop-ring {
+  display: inline;
+}

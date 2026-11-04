@@ -156,6 +156,8 @@ describe('positions over time', () => {
             box_in_time: null,
             box_out_time: null,
             stop_duration: null,
+            in_travel: null,
+            out_travel: null,
             total_duration: 10,
             stop_type: 'OTHER',
             tires: [],
@@ -171,7 +173,7 @@ describe('positions over time', () => {
     )
     const f = frameAt(m.byCar.get(2)!, 75, m.finishTime)
     expect(f.status).toBe('pit')
-    expect(f.pitFraction).toBeCloseTo(0.5)
+    expect(f.pitState?.f).toBeCloseTo(0.5)
   })
 })
 

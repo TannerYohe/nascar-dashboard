@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { cleanName, gap, lapTime, surname } from '../../lib/format'
 import { makeColor } from '../../lib/racing'
-import type { RaceModel } from './engine/model'
+import type { PitProgress, RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { useReplayStore } from './store'
 
@@ -24,6 +24,21 @@ export function CarChip({ label, make, small }: { label: string; make: string | 
       style={{ background: makeColor(make), color: make === 'Chevrolet' ? '#1a1300' : '#fff' }}
     >
       {label}
+    </span>
+  )
+}
+
+/** PIT while driving down pit road; a running stop clock while in the box. */
+function PitBadge({ state }: { state: PitProgress | null }) {
+  const stopped = state?.phase === 'stopped'
+  return (
+    <span
+      className={clsx(
+        'tabular shrink-0 rounded px-1 font-mono text-[10px] font-bold',
+        stopped ? 'bg-sky-400 text-sky-950' : 'bg-sky-500/20 text-sky-300',
+      )}
+    >
+      {stopped ? `STOP ${state.stopped.toFixed(1)}` : 'PIT'}
     </span>
   )
 }
@@ -98,9 +113,7 @@ export function Leaderboard({ model, rows, t }: Props) {
                 <span className="truncate font-medium" title={cleanName(car.name)}>
                   {surname(car.name)}
                 </span>
-                {status === 'pit' && (
-                  <span className="rounded bg-sky-500/20 px-1 text-[10px] font-bold text-sky-300">PIT</span>
-                )}
+                {status === 'pit' && <PitBadge state={row.frame.pitState} />}
                 {penalty && (
                   <Flag size={12} className="shrink-0 text-orange-400" aria-label="Penalty pending" />
                 )}

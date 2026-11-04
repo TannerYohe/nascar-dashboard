@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import { cleanName, clock, lapTime } from '../../lib/format'
 import { FLAG, flagStyle } from '../../lib/racing'
 import { CarChip } from './Leaderboard'
-import type { RaceEvent, RaceModel } from './engine/model'
+import type { PitWindow, RaceEvent, RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { type SideTab, useReplayStore } from './store'
 
@@ -228,6 +228,7 @@ function Pits({ model, t, visibleCars }: { model: RaceModel; t: number; visibleC
                     <span className="tabular font-mono text-faint">{s.total_duration.toFixed(1)}s on pit road</span>
                   )}
                 </div>
+                <PitSplit window={w} t={t} />
                 <div className="mt-1.5 flex items-center gap-2">
                   <Tires tires={s.tires} />
                   {s.in_flag != null && (
@@ -251,6 +252,35 @@ function Pits({ model, t, visibleCars }: { model: RaceModel; t: number; visibleC
         )
       })}
     </ul>
+  )
+}
+
+/**
+ * Pit road as a bar: drive in, stopped, drive out, sized by time, with a
+ * marker for where the car is right now while it's on pit road.
+ */
+function PitSplit({ window: w, t }: { window: PitWindow; t: number }) {
+  const total = w.end - w.start
+  if (total <= 0 || w.boxIn == null || w.boxOut == null) return null
+  const driveIn = w.boxIn - w.start
+  const stop = w.boxOut - w.boxIn
+  const driveOut = w.end - w.boxOut
+  const pct = (x: number) => `${(x / total) * 100}%`
+  const now = t >= w.start && t <= w.end ? (t - w.start) / total : null
+  return (
+    <div className="mt-1.5">
+      <div className="relative flex h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
+        <span className="bg-sky-500/40" style={{ width: pct(driveIn) }} />
+        <span className="bg-sky-400" style={{ width: pct(stop) }} />
+        <span className="bg-sky-500/40" style={{ width: pct(driveOut) }} />
+        {now != null && <span className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${now * 100}%` }} />}
+      </div>
+      <div className="tabular mt-0.5 flex justify-between font-mono text-[10px] text-faint">
+        <span>in {driveIn.toFixed(1)}s</span>
+        <span className="text-sky-300">stopped {stop.toFixed(1)}s</span>
+        <span>out {driveOut.toFixed(1)}s</span>
+      </div>
+    </div>
   )
 }
 

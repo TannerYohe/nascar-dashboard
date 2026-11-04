@@ -169,6 +169,8 @@ class RacePitStop(Base):
     box_stop_race_time: Mapped[float | None]
     box_leave_race_time: Mapped[float | None]
     pit_stop_duration: Mapped[float | None]
+    in_travel_duration: Mapped[float | None]
+    out_travel_duration: Mapped[float | None]
     pit_stop_type: Mapped[str | None]
     left_front_tire_changed: Mapped[bool | None]
     right_front_tire_changed: Mapped[bool | None]

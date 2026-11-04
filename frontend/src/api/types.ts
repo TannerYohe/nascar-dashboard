@@ -97,6 +97,8 @@ export interface PitStop {
   box_in_time: number | null
   box_out_time: number | null
   stop_duration: number | null
+  in_travel: number | null
+  out_travel: number | null
   total_duration: number | null
   stop_type: string | null
   tires: Tire[]

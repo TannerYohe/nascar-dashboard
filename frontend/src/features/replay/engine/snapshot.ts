@@ -1,7 +1,7 @@
 // Sampling the race model at a moment in time.
 
 import { FLAG } from '../../../lib/racing'
-import { type CarModel, lastAtOrBefore, type PitWindow, type RaceModel } from './model'
+import { type CarModel, lastAtOrBefore, type PitProgress, pitProgress, type PitWindow, type RaceModel } from './model'
 
 export type CarStatus = 'grid' | 'running' | 'pit' | 'out' | 'finished'
 
@@ -15,8 +15,8 @@ export interface CarFrame {
   lapFraction: number
   status: CarStatus
   pit: PitWindow | null
-  /** 0..1 through the pit window when status is 'pit'. */
-  pitFraction: number
+  /** Where on pit road, and whether driving or stopped, when status is 'pit'. */
+  pitState: PitProgress | null
 }
 
 /** Laps the car had completed at time t. */
@@ -41,7 +41,7 @@ export function frameAt(car: CarModel, t: number, finishTime: number): CarFrame 
   const lapFraction = ((progress % 1) + 1) % 1
   let status: CarStatus = 'running'
   let pit: PitWindow | null = null
-  let pitFraction = 0
+  let pitState: PitProgress | null = null
 
   if (t <= 0) status = 'grid'
   else if (car.lastLap === 0 || t >= car.cross[car.lastLap]) {
@@ -51,10 +51,10 @@ export function frameAt(car: CarModel, t: number, finishTime: number): CarFrame 
     pit = car.pits.find((w) => w.start <= t && t <= w.end) ?? null
     if (pit) {
       status = 'pit'
-      pitFraction = (t - pit.start) / Math.max(1, pit.end - pit.start)
+      pitState = pitProgress(pit, t)
     }
   }
-  return { car, laps, progress, lapFraction, status, pit, pitFraction }
+  return { car, laps, progress, lapFraction, status, pit, pitState }
 }
 
 /** Leader laps completed at time t. */
