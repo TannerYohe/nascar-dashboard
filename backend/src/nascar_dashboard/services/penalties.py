@@ -230,7 +230,7 @@ def note_events(note: NoteText) -> list[NoteEvent]:
             e.infraction,
             e.penalty,
             e.detail,
-            key=f"{note.note_id}:{i}",
+            key=f"{note.lap}:{note.note_id}:{i}",
         )
         for i, e in enumerate(events)
     ]

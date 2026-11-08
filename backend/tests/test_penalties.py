@@ -63,3 +63,15 @@ def test_penalty_under_green_is_served_at_a_no_tire_stop() -> None:
 def test_unserved_penalty_stays_unserved() -> None:
     p = _one("#34 penalized for pit road speeding", [1] * 30, [PitVisit(34, 20, None, 0)])
     assert p.served_lap is None and p.served_how is None
+
+
+def test_note_ids_repeated_on_different_laps_stay_separate() -> None:
+    notes = [
+        NoteText(10, 3, "#5 penalized for speeding on pit road."),
+        NoteText(12, 7, "#5 serves his pass-through penalty."),
+        NoteText(50, 3, "#5 penalized for too many crew over the wall."),
+        NoteText(53, 7, "#5 serves his stop and go penalty."),
+    ]
+    first, second = build_penalties([], notes, [], [1] * 60, {})
+    assert first.id != second.id
+    assert (first.served_lap, second.served_lap) == (12, 53)
