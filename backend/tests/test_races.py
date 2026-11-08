@@ -1,6 +1,14 @@
+import datetime
+
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session, sessionmaker
 
 from conftest import RACE_ID
+from nascar_dashboard.models import Race
+from nascar_dashboard.services.races import _status
+
+NOW = datetime.datetime(2025, 6, 1, 18, tzinfo=datetime.UTC)
 
 
 def test_seasons_groups_series_by_year(client: TestClient) -> None:
@@ -41,3 +49,40 @@ def test_unknown_race_is_404(client: TestClient) -> None:
 
 def test_series_must_be_valid(client: TestClient) -> None:
     assert client.get("/api/races", params={"series": 7}).status_code == 422
+
+
+@pytest.mark.parametrize("aware", [True, False], ids=["aware", "naive"])
+@pytest.mark.parametrize(
+    ("has_results", "started_ago", "expected"),
+    [
+        (True, datetime.timedelta(hours=1), "finished"),
+        (False, -datetime.timedelta(hours=2), "scheduled"),
+        (False, datetime.timedelta(hours=1), "live"),
+        (False, datetime.timedelta(hours=9), "finished"),
+    ],
+    ids=["results", "future", "started-1h", "started-9h"],
+)
+def test_status(
+    has_results: bool, started_ago: datetime.timedelta, expected: str, aware: bool
+) -> None:
+    start = NOW - started_ago
+    # SQLite hands back naive UTC datetimes; DSQL timestamptz comes back aware.
+    race = Race(race_date=start if aware else start.replace(tzinfo=None))
+    assert _status(race, has_results, NOW) == expected
+
+
+def test_status_without_a_date_is_scheduled() -> None:
+    assert _status(Race(race_date=None), False, NOW) == "scheduled"
+
+
+def test_live_race_bundle_is_only_briefly_cacheable(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    started = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
+    with db() as session:
+        session.add(Race(race_id=300, series_id=1, race_season=2025, race_date=started))
+        session.commit()
+    assert client.get("/api/races/300").json()["status"] == "live"
+    response = client.get("/api/races/300/replay")
+    assert response.headers["cache-control"] == "public, max-age=5"
+    assert not response.json()["complete"]
