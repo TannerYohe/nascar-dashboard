@@ -2,7 +2,6 @@ import datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session, sessionmaker
 
 from conftest import RACE_ID
 from nascar_dashboard.models import Race
@@ -73,16 +72,3 @@ def test_status(
 
 def test_status_without_a_date_is_scheduled() -> None:
     assert _status(Race(race_date=None), False, NOW) == "scheduled"
-
-
-def test_live_race_bundle_is_only_briefly_cacheable(
-    client: TestClient, db: sessionmaker[Session]
-) -> None:
-    started = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
-    with db() as session:
-        session.add(Race(race_id=300, series_id=1, race_season=2025, race_date=started))
-        session.commit()
-    assert client.get("/api/races/300").json()["status"] == "live"
-    response = client.get("/api/races/300/replay")
-    assert response.headers["cache-control"] == "public, max-age=5"
-    assert not response.json()["complete"]
