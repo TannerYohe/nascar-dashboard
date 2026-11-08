@@ -265,12 +265,27 @@ describe('events', () => {
     expect(byId('served-p1')?.t).toBe(70)
   })
 
+  it.each([
+    { how: 'restart', lap: 3, served: 60, why: 'at the restart, the start of the lap' },
+    { how: 'lap_note', lap: 3, served: 75, why: 'from a note, midway through the lap' },
+    { how: 'pit_stop', lap: 4, served: 105, why: 'at a pit stop the data lacks, midway through the lap' },
+  ] as const)('times a penalty served $why', ({ how, lap, served }) => {
+    const m = buildModel(
+      bundle({
+        pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2 })],
+        penalties: [{ ...speeding, served_how: how, served_lap: lap }],
+      }),
+    )
+    expect(m.penalties[0].served).toBe(served)
+  })
+
   it('reports where a penalty stands over time', () => {
     const [timing] = model.penalties
     expect(penaltyStatusAt(timing, 10)).toBeNull()
     expect(penaltyStatusAt(timing, 30)).toBe('pending')
     expect(penaltyStatusAt(timing, 80)).toBe('served')
-    const [unrecorded] = buildModel(bundle({ penalties: [{ ...speeding, served_lap: null, served_how: null }] })).penalties
+    const unrecordedPenalty = { ...speeding, served_lap: null, served_how: null }
+    const [unrecorded] = buildModel(bundle({ penalties: [unrecordedPenalty] })).penalties
     expect(penaltyStatusAt(unrecorded, 30)).toBe('unrecorded')
   })
 
