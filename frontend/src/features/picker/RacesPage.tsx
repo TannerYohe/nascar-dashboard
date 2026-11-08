@@ -14,7 +14,7 @@ export function RacesPage() {
   const years = useMemo(() => seasons.data?.map((s) => s.year) ?? [], [seasons.data])
   const year = Number(params.get('year')) || years[0]
   const series = Number(params.get('series')) || 1
-  const races = useRaces(year, series, year != null)
+  const races = useRaces({ year, series, enabled: year != null })
   const [query, setQuery] = useState('')
 
   useEffect(() => {

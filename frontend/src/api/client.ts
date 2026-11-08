@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { skipToken, useQuery } from '@tanstack/react-query'
 
 import type { RaceDetail, RaceSummary, ReplayBundle, Season } from './types'
 
@@ -32,7 +32,13 @@ export function useSeasons() {
   return useQuery({ queryKey: ['seasons'], queryFn: api.seasons, staleTime: HOUR })
 }
 
-export function useRaces(year?: number, series?: number, enabled = true) {
+interface RacesOptions {
+  year?: number
+  series?: number
+  enabled?: boolean
+}
+
+export function useRaces({ year, series, enabled = true }: RacesOptions = {}) {
   return useQuery({
     queryKey: ['races', year ?? 'all', series ?? 'all'],
     queryFn: () => api.races(year, series),
@@ -41,8 +47,13 @@ export function useRaces(year?: number, series?: number, enabled = true) {
   })
 }
 
-export function useRace(raceId: number) {
-  return useQuery({ queryKey: ['race', raceId], queryFn: () => api.race(raceId), staleTime: HOUR })
+/** One race's details; does nothing while `raceId` is undefined. */
+export function useRace(raceId: number | undefined) {
+  return useQuery({
+    queryKey: ['race', raceId],
+    queryFn: raceId == null ? skipToken : () => api.race(raceId),
+    staleTime: HOUR,
+  })
 }
 
 /** How long a bundle that's still filling in stays fresh before reopening the race fetches it again. */

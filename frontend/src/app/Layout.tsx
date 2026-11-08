@@ -44,7 +44,7 @@ export function Layout() {
 function Breadcrumb() {
   const replay = useMatch('/replay/:raceId')
   const raceId = replay ? Number(replay.params.raceId) : undefined
-  const race = useRace(raceId ?? 0)
+  const race = useRace(raceId)
   const [params] = useSearchParams()
   const seasons = useSeasons()
 
@@ -172,7 +172,7 @@ function SeriesCrumb({ year, series }: { year: number; series: number }) {
 }
 
 function RaceCrumb({ year, series, raceId, name }: { year: number; series: number; raceId: number; name: string }) {
-  const races = useRaces(year, series)
+  const races = useRaces({ year, series })
   return (
     <Crumb label={name} wide>
       {(close) => (

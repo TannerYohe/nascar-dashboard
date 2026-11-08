@@ -15,7 +15,7 @@ interface Props {
 /** Ctrl/⌘-K search across every race, e.g. "daytona 2024" or "cup martinsville". */
 export function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate()
-  const races = useRaces(undefined, undefined, open)
+  const races = useRaces({ enabled: open })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
