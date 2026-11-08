@@ -1,11 +1,11 @@
 import datetime
 
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from conftest import RACE_ID
-from nascar_dashboard.models import Race, RaceLap, RaceLapNote
+from nascar_dashboard.models import Race, RaceLap, RaceLapNote, RacePitStop, RaceResult
 from nascar_dashboard.routes.replay import COMPLETE_CACHE, INCOMPLETE_CACHE, _BundleCache
 
 
@@ -66,7 +66,7 @@ def test_notes_carry_driver_ids_and_kind(client: TestClient) -> None:
     assert spin["driver_ids"] == [3]
 
 
-def _delete(db: sessionmaker[Session], statement) -> None:
+def _execute(db: sessionmaker[Session], statement) -> None:
     with db() as session:
         session.execute(statement)
         session.commit()
@@ -80,7 +80,7 @@ def test_complete_bundle_is_served_from_the_cache(
     assert first.headers["cache-control"] == COMPLETE_CACHE
 
     # With the race gone from the database, only the cache can answer.
-    _delete(db, delete(Race).where(Race.race_id == RACE_ID))
+    _execute(db, delete(Race).where(Race.race_id == RACE_ID))
     second = client.get(f"/api/races/{RACE_ID}/replay")
     assert second.status_code == 200
     assert second.content == first.content
@@ -91,7 +91,7 @@ def test_bundle_still_loading_notes_is_not_cached(
     client: TestClient, db: sessionmaker[Session]
 ) -> None:
     # Results are in, but the lap notes haven't landed yet.
-    _delete(db, delete(RaceLapNote))
+    _execute(db, delete(RaceLapNote))
     first = client.get(f"/api/races/{RACE_ID}/replay")
     assert first.headers["cache-control"] == INCOMPLETE_CACHE
     assert not first.json()["complete"]
@@ -104,21 +104,46 @@ def test_bundle_still_loading_notes_is_not_cached(
 def test_bundle_short_of_the_last_lap_is_not_cached(
     client: TestClient, db: sessionmaker[Session]
 ) -> None:
-    _delete(db, delete(RaceLap).where(RaceLap.lap > 4))
+    _execute(db, delete(RaceLap).where(RaceLap.lap > 4))
     response = client.get(f"/api/races/{RACE_ID}/replay")
     assert response.headers["cache-control"] == INCOMPLETE_CACHE
     assert not response.json()["complete"]
 
 
-def test_live_race_bundle_is_only_briefly_cacheable(
+def test_bundle_still_loading_pit_stops_is_not_cached(
     client: TestClient, db: sessionmaker[Session]
 ) -> None:
-    started = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
+    # Results, laps and notes are in, but the pit data hasn't landed yet.
+    _execute(db, delete(RacePitStop))
+    first = client.get(f"/api/races/{RACE_ID}/replay")
+    assert first.headers["cache-control"] == INCOMPLETE_CACHE
+    assert not first.json()["complete"]
     with db() as session:
-        session.add(Race(race_id=300, series_id=1, race_season=2025, race_date=started))
+        session.add(
+            RacePitStop(race_id=RACE_ID, vehicle_number=11, pit_in_race_time=70.0, lap_count=3)
+        )
         session.commit()
-    assert client.get("/api/races/300").json()["status"] == "live"
-    response = client.get("/api/races/300/replay")
+    assert [s["car_number"] for s in _bundle(client)["pit_stops"]] == [11]
+
+
+def test_live_race_with_all_its_data_is_only_briefly_cacheable(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    # Laps, notes and pits are all in, but there are no results yet.
+    started = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
+    _execute(db, delete(RaceResult))
+    _execute(db, update(Race).where(Race.race_id == RACE_ID).values(race_date=started))
+    assert client.get(f"/api/races/{RACE_ID}").json()["status"] == "live"
+    response = client.get(f"/api/races/{RACE_ID}/replay")
+    assert response.headers["cache-control"] == INCOMPLETE_CACHE
+    assert not response.json()["complete"]
+
+
+def test_race_without_actual_laps_is_not_complete(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    _execute(db, update(Race).where(Race.race_id == RACE_ID).values(actual_laps=None))
+    response = client.get(f"/api/races/{RACE_ID}/replay")
     assert response.headers["cache-control"] == INCOMPLETE_CACHE
     assert not response.json()["complete"]
 
