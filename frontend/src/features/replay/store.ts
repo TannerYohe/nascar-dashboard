@@ -8,7 +8,7 @@ export const DEFAULT_SPEED = 8
  * frame, and the track redraws from it directly. Panels read the throttled
  * `t` in the store instead.
  */
-export const clock = {
+export const replayClock = {
   t: 0,
   listeners: new Set<(t: number) => void>(),
   subscribe(fn: (t: number) => void) {
@@ -29,7 +29,7 @@ interface ReplayState {
   duration: number
   playing: boolean
   speed: number
-  /** Throttled copy of clock.t for React (about 8 updates a second). */
+  /** Throttled copy of replayClock.t for React (about 8 updates a second). */
   t: number
   hidden: Set<number>
   filterMode: FilterMode
@@ -65,20 +65,20 @@ export const useReplayStore = create<ReplayState>((set, get) => ({
   tab: 'feed',
 
   reset: (duration, startAt = 0) => {
-    clock.t = startAt
+    replayClock.t = startAt
     set({ duration, t: startAt, playing: false, hidden: new Set(), selected: null, hovered: null })
-    clock.emit()
+    replayClock.emit()
   },
   play: () => {
-    if (clock.t >= get().duration) get().seek(0)
+    if (replayClock.t >= get().duration) get().seek(0)
     set({ playing: true })
   },
   pause: () => set({ playing: false }),
   toggle: () => (get().playing ? get().pause() : get().play()),
   seek: (t) => {
-    clock.t = Math.max(-1, Math.min(get().duration, t))
-    set({ t: clock.t })
-    clock.emit()
+    replayClock.t = Math.max(-1, Math.min(get().duration, t))
+    set({ t: replayClock.t })
+    replayClock.emit()
   },
   setSpeed: (speed) => set({ speed }),
   faster: () => {
@@ -112,11 +112,11 @@ export function startClockLoop(): () => void {
     last = now
     const s = useReplayStore.getState()
     if (s.playing) {
-      clock.t = Math.min(s.duration, clock.t + dt * s.speed)
-      if (clock.t >= s.duration) useReplayStore.setState({ playing: false })
-      clock.emit()
+      replayClock.t = Math.min(s.duration, replayClock.t + dt * s.speed)
+      if (replayClock.t >= s.duration) useReplayStore.setState({ playing: false })
+      replayClock.emit()
       if (now - lastUi > 120) {
-        useReplayStore.setState({ t: clock.t })
+        useReplayStore.setState({ t: replayClock.t })
         lastUi = now
       }
     }

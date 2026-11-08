@@ -4,7 +4,7 @@ import { makeStyle } from '../../lib/racing'
 import { cleanName } from '../../lib/format'
 import type { RaceModel } from './engine/model'
 import { frameAt } from './engine/snapshot'
-import { clock, useReplayStore } from './store'
+import { replayClock, useReplayStore } from './store'
 import { buildMotion, placementAt } from './engine/motion'
 import { alignToTiming, buildGeometry, loadLayout, pitPoint, pointOn, type TrackGeometry } from './track'
 
@@ -90,12 +90,12 @@ function Track({ model, geometry }: { model: RaceModel; geometry: TrackGeometry 
         el.style.opacity = dim ? '0.28' : '1'
       }
     }
-    draw(clock.t)
-    return clock.subscribe(draw)
+    draw(replayClock.t)
+    return replayClock.subscribe(draw)
   }, [model, geometry, r, motion, align.line])
 
   // Re-run a frame when filters change while paused.
-  useEffect(() => clock.emit(), [hidden, filterMode])
+  useEffect(() => replayClock.emit(), [hidden, filterMode])
 
   // Selected and hovered cars draw last, on top of the pack.
   const order = useMemo(() => {

@@ -1,5 +1,5 @@
 import { FLAG, flagStyle } from '../../lib/racing'
-import { clock as fmtClock } from '../../lib/format'
+import { clock } from '../../lib/format'
 import type { RaceModel } from './engine/model'
 import type { RaceState } from './engine/snapshot'
 
@@ -43,7 +43,7 @@ export function RaceHeader({ model, state }: { model: RaceModel; state: RaceStat
         </Stat>
       )}
       <Stat label="To go">{state.lapsToGo}</Stat>
-      <Stat label="Race time">{fmtClock(state.t)}</Stat>
+      <Stat label="Race time">{clock(state.t)}</Stat>
     </div>
   )
 }
