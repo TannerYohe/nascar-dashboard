@@ -99,7 +99,9 @@ class Leader(BaseModel):
 class PitStop(BaseModel):
     car_number: int
     driver_name: str | None
+    # Laps the car had completed at pit-in.
     lap: int | None
+    # Laps the leader had completed at pit-in (one less than the lap notes' lap number).
     leader_lap: int | None
     in_time: float
     out_time: float | None

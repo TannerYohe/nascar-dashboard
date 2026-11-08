@@ -106,6 +106,7 @@ class NoteText:
 @dataclass(frozen=True)
 class PitVisit:
     car_number: int
+    # Leader lap the stop was made on, numbered like lap notes.
     lap: int | None
     infraction: str | None
     tires_changed: int

@@ -118,14 +118,15 @@ def _populate(session: Session) -> None:
                 )
             )
 
-    def stop(car: int, t_in: float, t_out: float, lap: int, tires: bool, **kw) -> RacePitStop:
+    # `laps_done` is the car's and the leader's laps completed at pit-in (no car here is lapped).
+    def stop(car: int, t_in: float, t_out: float, laps_done: int, tires: bool, **kw) -> RacePitStop:
         return RacePitStop(
             race_id=RACE_ID,
             vehicle_number=car,
             pit_in_race_time=t_in,
             pit_out_race_time=t_out,
-            lap_count=lap,
-            leader_lap=lap,
+            lap_count=laps_done,
+            leader_lap=laps_done,
             left_front_tire_changed=tires,
             right_front_tire_changed=tires,
             left_rear_tire_changed=tires,
@@ -166,7 +167,7 @@ def _populate(session: Session) -> None:
                 note="Caution: #33 spins in turn 2.",
             ),
             RaceLapNoteDriver(race_id=RACE_ID, lap_number=3, note_id=3, driver_id=3),
-            stop(22, 70.0, 95.0, 3, False, pit_stop_type="OTHER", pit_stop_duration=-1),
+            stop(22, 70.0, 95.0, 2, False, pit_stop_type="OTHER", pit_stop_duration=-1),
             stop(
                 11, 110.0, 150.0, 3, True, pit_stop_type="FOUR_WHEEL_CHANGE", pit_stop_duration=11.2
             ),

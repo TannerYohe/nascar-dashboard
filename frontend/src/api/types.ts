@@ -90,7 +90,9 @@ export type Tire = 'LF' | 'RF' | 'LR' | 'RR'
 export interface PitStop {
   car_number: number
   driver_name: string | null
+  /** Laps the car had completed at pit-in. */
   lap: number | null
+  /** Laps the leader had completed at pit-in (one less than the lap notes' lap number). */
   leader_lap: number | null
   in_time: number
   out_time: number | null

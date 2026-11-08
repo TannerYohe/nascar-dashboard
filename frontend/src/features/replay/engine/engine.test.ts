@@ -214,7 +214,7 @@ describe('events', () => {
     penalty: 'Pass-through',
     detail: null,
     source: 'lap_note',
-    served_lap: 2,
+    served_lap: 3,
     served_how: 'pit_stop',
   }
   // Leader laps end at 30, 60, 90 and 120. Lap 2 is under caution.
@@ -283,6 +283,14 @@ describe('events', () => {
       }),
     )
     expect(m.penalties[0].served).toBe(served)
+  })
+
+  it('matches the serving stop by leader lap, not the car lap', () => {
+    // Car 2 a lap down: its own lap 1 when the leader has done 2, so leader lap 3.
+    const lapped = buildModel(
+      bundle({ pit_stops: [pitStop(2, 70, 80, { lap: 1, leader_lap: 2 })], penalties: [speeding] }),
+    )
+    expect(lapped.penalties[0].served).toBe(70)
   })
 
   it('reports where a penalty stands over time', () => {

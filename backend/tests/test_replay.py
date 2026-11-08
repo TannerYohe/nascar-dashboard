@@ -59,17 +59,34 @@ def test_penalties_merge_official_and_note_sources(client: TestClient) -> None:
     assert official["infraction"] == "Too many men over the wall"
 
 
+def _execute(db: sessionmaker[Session], statement) -> None:
+    with db() as session:
+        session.execute(statement)
+        session.commit()
+
+
+def test_lapped_car_serves_a_penalty_at_its_next_stop(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    # Car 22 is a lap down: one lap of its own done at pit-in, while the leader has done two.
+    _execute(
+        db,
+        update(RacePitStop)
+        .where(RacePitStop.vehicle_number == 22)
+        .values(lap_count=1, leader_lap=2),
+    )
+    body = _bundle(client)
+    speeding = next(p for p in body["penalties"] if p["car_number"] == 22)
+    assert (speeding["lap"], speeding["served_lap"], speeding["served_how"]) == (2, 3, "pit_stop")
+    stop = next(s for s in body["pit_stops"] if s["car_number"] == 22)
+    assert (stop["lap"], stop["leader_lap"]) == (1, 2)
+
+
 def test_notes_carry_driver_ids_and_kind(client: TestClient) -> None:
     notes = _bundle(client)["notes"]
     assert notes[0]["kind"] == "pre_race"
     spin = next(n for n in notes if n["lap"] == 3)
     assert spin["driver_ids"] == [3]
-
-
-def _execute(db: sessionmaker[Session], statement) -> None:
-    with db() as session:
-        session.execute(statement)
-        session.commit()
 
 
 def test_complete_bundle_is_served_from_the_cache(
