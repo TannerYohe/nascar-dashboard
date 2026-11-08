@@ -100,7 +100,7 @@ Map data © OpenStreetMap contributors, available under the [ODbL](https://www.o
 
 ## Deployment
 
-The plan is AWS serverless, like cadence: the API on Lambda behind a Function URL or API Gateway, and the built UI on S3 + CloudFront. The API holds no state beyond an in-process cache of finished-race bundles, so it runs unchanged on Lambda. It's not set up yet.
+The plan is AWS serverless, like cadence: the API on Lambda behind a Function URL or API Gateway, and the built UI on S3 + CloudFront. The API holds no state beyond an in-process cache of complete race bundles, so it runs unchanged on Lambda. It's not set up yet.
 
 ## License
 

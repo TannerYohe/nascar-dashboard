@@ -143,6 +143,8 @@ export interface StageResult {
 export interface ReplayBundle {
   race: RaceDetail
   finished: boolean
+  /** All of the race's data is loaded, so the bundle won't change. */
+  complete: boolean
   drivers: ReplayDriver[]
   laps: DriverLaps[]
   lap_flags: number[]

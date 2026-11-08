@@ -276,9 +276,15 @@ def build_replay(session: Session, race_id: int) -> ReplayBundle | None:
         driver_by_car,
     )
 
+    finished = race.status == "finished"
     return ReplayBundle(
         race=race,
-        finished=race.status == "finished",
+        finished=finished,
+        complete=finished
+        and bool(race.actual_laps)
+        and max_lap >= (race.actual_laps or 0)
+        and bool(notes)
+        and bool(pit_stops),
         drivers=drivers,
         laps=laps,
         lap_flags=flags,

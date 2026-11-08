@@ -163,6 +163,9 @@ class StageResult(BaseModel):
 class ReplayBundle(BaseModel):
     race: RaceDetail
     finished: bool
+    # Finished, with lap times to the last lap, lap notes and pit stops all loaded.
+    # A complete bundle won't change, so it can be cached for good.
+    complete: bool
     drivers: list[ReplayDriver]
     laps: list[DriverLaps]
     # Flag for each lap, index = lap number (index 0 is the pre-race grid).

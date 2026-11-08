@@ -186,15 +186,23 @@ def _populate(session: Session) -> None:
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
+def db() -> Iterator[sessionmaker[Session]]:
+    """Session factory for the populated test database."""
     engine = sqlite_engine(None)
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     with factory() as session:
         _populate(session)
+    try:
+        yield factory
+    finally:
+        engine.dispose()
 
+
+@pytest.fixture
+def client(db: sessionmaker[Session]) -> Iterator[TestClient]:
     def _session() -> Iterator[Session]:
-        with factory() as session:
+        with db() as session:
             yield session
 
     app.dependency_overrides[get_session] = _session
@@ -203,4 +211,3 @@ def client() -> Iterator[TestClient]:
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
-        engine.dispose()

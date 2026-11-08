@@ -1,6 +1,11 @@
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
+from sqlalchemy.orm import Session, sessionmaker
 
 from conftest import RACE_ID
+from nascar_dashboard.models import RaceLap, RaceLapNote
+
+INCOMPLETE = "public, max-age=5"
 
 
 def _bundle(client: TestClient) -> dict:
@@ -60,7 +65,36 @@ def test_notes_carry_driver_ids_and_kind(client: TestClient) -> None:
     assert spin["driver_ids"] == [3]
 
 
-def test_finished_bundle_is_cacheable(client: TestClient) -> None:
+def _delete(db: sessionmaker[Session], statement) -> None:
+    with db() as session:
+        session.execute(statement)
+        session.commit()
+
+
+def test_bundle_still_loading_notes_is_not_cached(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    # Results are in, but the lap notes haven't landed yet.
+    _delete(db, delete(RaceLapNote))
     first = client.get(f"/api/races/{RACE_ID}/replay")
-    assert first.headers["cache-control"] == "public, max-age=86400"
-    assert client.get(f"/api/races/{RACE_ID}/replay").content == first.content
+    assert first.headers["cache-control"] == INCOMPLETE
+    assert not first.json()["complete"]
+    with db() as session:
+        session.add(RaceLapNote(race_id=RACE_ID, lap_number=1, note_id=1, note="Green flag."))
+        session.commit()
+    assert [n["note"] for n in _bundle(client)["notes"]] == ["Green flag."]
+
+
+def test_bundle_short_of_the_last_lap_is_not_cached(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    _delete(db, delete(RaceLap).where(RaceLap.lap > 4))
+    response = client.get(f"/api/races/{RACE_ID}/replay")
+    assert response.headers["cache-control"] == INCOMPLETE
+    assert not response.json()["complete"]
+
+
+def test_complete_bundle_is_cacheable(client: TestClient) -> None:
+    response = client.get(f"/api/races/{RACE_ID}/replay")
+    assert response.json()["complete"]
+    assert response.headers["cache-control"] == "public, max-age=86400"

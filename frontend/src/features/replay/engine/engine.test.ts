@@ -50,6 +50,7 @@ function bundle(overrides: Partial<ReplayBundle> = {}): ReplayBundle {
       television_broadcaster: null,
     },
     finished: true,
+    complete: true,
     // Car 1 leads every lap; car 2 is a second back; car 3 drops out after lap 2;
     // car 4 is a lap down by the end.
     drivers: [driver(1, 1, 2, 1), driver(2, 2, 1, 2), driver(3, 3, 3, 4), driver(4, 4, 4, 3)],

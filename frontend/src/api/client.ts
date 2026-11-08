@@ -45,10 +45,13 @@ export function useRace(raceId: number) {
   return useQuery({ queryKey: ['race', raceId], queryFn: () => api.race(raceId), staleTime: HOUR })
 }
 
+/** How long a bundle that's still filling in stays fresh before reopening the race fetches it again. */
+const INCOMPLETE_REFETCH = 30 * 1000
+
 export function useReplay(raceId: number) {
   return useQuery({
     queryKey: ['replay', raceId],
     queryFn: () => api.replay(raceId),
-    staleTime: Infinity,
+    staleTime: (query) => (query.state.data?.complete ? Infinity : INCOMPLETE_REFETCH),
   })
 }
