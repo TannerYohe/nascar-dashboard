@@ -136,15 +136,18 @@ function carMotion(model: RaceModel, car: CarModel, layout: PitLayout): CarMotio
 
 /**
  * Laps the car had completed when it reached pit entry. The pit line comes
- * from the whole field, so a stop's pit-in time can fall on either side of
- * this car's crossing; pick the lap count that puts pit entry nearest where
- * the car would be at its normal pace.
+ * from the whole field, so a stop's pit-in time can fall just the wrong side
+ * of this car's crossing: just after it when pit entry is late in the lap,
+ * just before it when entry is early. Within that one-way slack, pick the lap
+ * count that puts pit entry nearest where the car would be at its normal pace.
+ * The clamp keeps a slow in-lap (a car limping in) on the lap it started.
  */
 function lapsBeforePitEntry(model: RaceModel, car: CarModel, w: PitWindow, layout: PitLayout): number {
   const n = Math.max(0, lastAtOrBefore(car.cross, w.start))
   const pace = cruiseLapTime(model, car, [n, n - 1, n - 2])
   const progress = n + (w.start - car.cross[n]) / pace
-  return Math.max(0, Math.round(progress - layout.entry))
+  const laps = Math.round(progress - layout.entry)
+  return Math.max(0, layout.entry > 0.5 ? Math.min(n, laps) : Math.max(n, laps))
 }
 
 function order(kind: AnchorKind): number {

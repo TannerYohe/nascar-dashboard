@@ -149,4 +149,18 @@ describe('motion', () => {
     const atIn = placementAt(motion, 43.49)
     expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(2.9, 2)
   })
+
+  it('keeps a slow in-lap on the lap it started', () => {
+    // A 90 s in-lap on 30 s laps: the car crosses lap 3 at 90 and limps to pit entry at 144.
+    const m = model([null, 30, 30, 30, 90, 30], [pitStop(9, 144, 170)])
+    const motion = buildMotion(m, { entry: 0.9, exit: 0.1 }).get(1)!
+    const mid = placementAt(motion, 120)
+    expect(mid.on === 'track' && mid.progress).toBeGreaterThan(3)
+    expect(mid.on === 'track' && mid.progress).toBeLessThan(3.9)
+    const atIn = placementAt(motion, 143.99)
+    expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(3.9, 2)
+    const out = placementAt(motion, 170.001)
+    expect(out.on === 'track' && out.progress).toBeCloseTo(4.1, 2)
+    expect(placementAt(motion, 210)).toEqual({ on: 'track', progress: 5 })
+  })
 })
