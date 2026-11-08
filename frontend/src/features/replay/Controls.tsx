@@ -2,7 +2,7 @@ import { ChevronsLeft, ChevronsRight, Pause, Play, SkipBack } from 'lucide-react
 import { useMemo } from 'react'
 
 import { FLAG } from '../../lib/racing'
-import { lapStartTime, type RaceModel } from './engine/model'
+import { lapSeekTime, lapStartTime, type RaceModel } from './engine/model'
 import type { RaceState } from './engine/snapshot'
 import { SPEEDS, useReplayStore } from './store'
 
@@ -20,10 +20,7 @@ export function Controls({ model, state, visibleCars }: Props) {
   const { toggle, seek, setSpeed } = useReplayStore.getState()
   const duration = model.duration
 
-  const stepLap = (delta: number) => {
-    const target = Math.max(1, Math.min(model.totalLaps, state.lap + delta))
-    seek(lapStartTime(model, target) + 0.01)
-  }
+  const stepLap = (delta: number) => seek(lapSeekTime(model, state.lap + delta))
 
   return (
     <div className="flex flex-col gap-2">

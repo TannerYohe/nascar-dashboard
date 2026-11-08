@@ -7,7 +7,7 @@ import { longDate } from '../../lib/format'
 import { flagStyle, seriesName } from '../../lib/racing'
 import { CarFilter } from './CarFilter'
 import { Controls } from './Controls'
-import { buildModel, lapStartTime, type RaceModel } from './engine/model'
+import { buildModel, lapSeekTime, type RaceModel } from './engine/model'
 import { raceStateAt, standingsAt } from './engine/snapshot'
 import { Leaderboard } from './Leaderboard'
 import { RaceHeader } from './RaceHeader'
@@ -35,7 +35,7 @@ function Replay({ bundle }: { bundle: ReplayBundle }) {
   const startT = Number(params.get('t')) || 0
 
   useEffect(() => {
-    const start = startT > 0 ? startT : startLap > 1 ? lapStartTime(model, startLap) + 0.01 : 0
+    const start = startT > 0 ? startT : startLap > 1 ? lapSeekTime(model, startLap) : 0
     useReplayStore.getState().reset(model.duration, start)
     const stop = startClockLoop()
     document.title = `${bundle.race.race_name ?? 'Race'} · Race Rewind`
@@ -119,11 +119,11 @@ function useKeyboard(model: RaceModel) {
           break
         case 'ArrowRight':
           e.preventDefault()
-          s.seek(lapStartTime(model, Math.min(model.totalLaps, lap + (e.shiftKey ? 10 : 1))) + 0.01)
+          s.seek(lapSeekTime(model, lap + (e.shiftKey ? 10 : 1)))
           break
         case 'ArrowLeft':
           e.preventDefault()
-          s.seek(lapStartTime(model, Math.max(1, lap - (e.shiftKey ? 10 : 1))) + 0.01)
+          s.seek(lapSeekTime(model, lap - (e.shiftKey ? 10 : 1)))
           break
         case ']':
           s.faster()

@@ -368,6 +368,11 @@ export function lapStartTime(model: RaceModel, lap: number): number {
   return model.leaderCross[Math.min(lap - 1, model.totalLaps)] ?? model.finishTime
 }
 
+/** Where to seek to show lap `lap` (clamped to the race): just after the leader starts it. */
+export function lapSeekTime(model: RaceModel, lap: number): number {
+  return lapStartTime(model, Math.max(1, Math.min(model.totalLaps, lap))) + 0.01
+}
+
 /** Midway through the leader's lap `lap`: when a note about that lap shows up. */
 export function lapMidTime(model: RaceModel, lap: number): number {
   if (lap <= 0) return -1
