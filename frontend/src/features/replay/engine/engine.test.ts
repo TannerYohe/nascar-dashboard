@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Penalty, ReplayBundle, ReplayDriver } from '../../../api/types'
 import { pitStop } from './fixtures'
-import { buildModel, lapMidTime, lastAtOrBefore, penaltyStatusAt } from './model'
+import { buildModel, lapMidTime, lapSeekTime, lastAtOrBefore, penaltyStatusAt } from './model'
 import { frameAt, lapsAt, progressAt, raceStateAt, standingsAt } from './snapshot'
 
 function driver(id: number, car: number, start: number, finish: number, make = 'Ford'): ReplayDriver {
@@ -116,6 +116,12 @@ describe('buildModel', () => {
 
   it('places notes midway through the leader lap', () => {
     expect(lapMidTime(model, 2)).toBe(45)
+  })
+
+  it('seeks just past the start of a lap, kept inside the race', () => {
+    expect(lapSeekTime(model, 3)).toBeCloseTo(60.01)
+    expect(lapSeekTime(model, 0)).toBeCloseTo(0.01)
+    expect(lapSeekTime(model, 99)).toBe(lapSeekTime(model, model.totalLaps))
   })
 })
 
