@@ -3,8 +3,10 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session, sessionmaker
 
 from conftest import RACE_ID
-from nascar_dashboard.models import RaceLap, RaceLapNote
+from nascar_dashboard.models import Race, RaceLap, RaceLapNote
+from nascar_dashboard.routes.replay import _BundleCache
 
+COMPLETE = "public, max-age=86400"
 INCOMPLETE = "public, max-age=5"
 
 
@@ -71,6 +73,21 @@ def _delete(db: sessionmaker[Session], statement) -> None:
         session.commit()
 
 
+def test_complete_bundle_is_served_from_the_cache(
+    client: TestClient, db: sessionmaker[Session]
+) -> None:
+    first = client.get(f"/api/races/{RACE_ID}/replay")
+    assert first.json()["complete"]
+    assert first.headers["cache-control"] == COMPLETE
+
+    # With the race gone from the database, only the cache can answer.
+    _delete(db, delete(Race).where(Race.race_id == RACE_ID))
+    second = client.get(f"/api/races/{RACE_ID}/replay")
+    assert second.status_code == 200
+    assert second.content == first.content
+    assert second.headers["cache-control"] == COMPLETE
+
+
 def test_bundle_still_loading_notes_is_not_cached(
     client: TestClient, db: sessionmaker[Session]
 ) -> None:
@@ -94,7 +111,11 @@ def test_bundle_short_of_the_last_lap_is_not_cached(
     assert not response.json()["complete"]
 
 
-def test_complete_bundle_is_cacheable(client: TestClient) -> None:
-    response = client.get(f"/api/races/{RACE_ID}/replay")
-    assert response.json()["complete"]
-    assert response.headers["cache-control"] == "public, max-age=86400"
+def test_bundle_cache_evicts_the_least_recently_used() -> None:
+    cache = _BundleCache(2)
+    cache.put(1, b"one")
+    cache.put(2, b"two")
+    assert cache.get(1) == b"one"  # 1 is now the most recently used
+    cache.put(3, b"three")
+    assert cache.get(2) is None
+    assert (cache.get(1), cache.get(3)) == (b"one", b"three")
