@@ -1,5 +1,6 @@
 from nascar_dashboard.services.penalties import (
     NoteText,
+    OfficialInfraction,
     PitVisit,
     build_penalties,
     note_events,
@@ -75,3 +76,61 @@ def test_note_ids_repeated_on_different_laps_stay_separate() -> None:
     first, second = build_penalties([], notes, [], [1] * 60, {})
     assert first.id != second.id
     assert (first.served_lap, second.served_lap) == (12, 53)
+
+
+def _official(car: int, lap: int) -> OfficialInfraction:
+    return OfficialInfraction(
+        uid=f"official-{car}-{lap}",
+        car_number=car,
+        driver_id=None,
+        lap=lap,
+        lap_assessed=lap,
+        infraction="Speeding",
+        penalty="Pass through",
+        notes=None,
+    )
+
+
+def test_car_list_penalizes_every_car() -> None:
+    assert _events("#1, #2 and #3 penalized for pit road speeding.") == [
+        ("issued", car, "Pit road speeding", None) for car in (1, 2, 3)
+    ]
+
+
+def test_note_within_a_lap_of_an_official_penalty_is_not_listed_twice() -> None:
+    notes = [
+        NoteText(11, 1, "#5 penalized for pit road speeding."),
+        NoteText(13, 1, "#5 penalized for too many crew over the wall."),
+    ]
+    penalties = build_penalties([_official(5, 10)], notes, [], [1] * 20, {})
+    assert [(p.lap, p.source) for p in penalties] == [(10, "official"), (13, "lap_note")]
+
+
+def test_pit_report_infraction_becomes_a_penalty() -> None:
+    pits = [PitVisit(7, 4, "Too many men over the wall", 4)]
+    [p] = build_penalties([], [], pits, [1] * 10, {7: 70})
+    assert (p.source, p.car_number, p.driver_id, p.lap) == ("pit_stop", 7, 70, 4)
+    assert p.infraction == "Too many crew over the wall"
+
+
+def test_pit_report_infraction_already_in_a_note_is_not_listed_twice() -> None:
+    notes = [NoteText(4, 1, "#7 penalized for too many men over the wall.")]
+    pits = [PitVisit(7, 4, "Too many men over the wall", 4)]
+    [p] = build_penalties([], notes, pits, [1] * 10, {})
+    assert p.source == "lap_note"
+
+
+def test_serves_note_marks_the_penalty_served() -> None:
+    notes = [
+        NoteText(2, 1, "#34 penalized for pit road speeding."),
+        NoteText(4, 1, "#34 serves his pass-through penalty."),
+    ]
+    [p] = build_penalties([], notes, [PitVisit(34, 3, None, 0)], [1] * 10, {})
+    assert (p.served_lap, p.served_how) == (4, "lap_note")
+
+
+def test_infraction_tagged_stop_outranks_a_no_tire_stop() -> None:
+    pits = [PitVisit(34, 3, None, 0), PitVisit(34, 5, "Pass through", 0)]
+    notes = [NoteText(2, 1, "#34 penalized for pit road speeding")]
+    given = next(p for p in build_penalties([], notes, pits, [1] * 12, {}) if p.lap == 2)
+    assert (given.served_lap, given.served_how) == (5, "pit_stop")
