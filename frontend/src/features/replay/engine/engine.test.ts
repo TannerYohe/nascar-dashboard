@@ -242,8 +242,21 @@ describe('events', () => {
   })
 
   it('marks stage ends but not the final stage', () => {
+    expect(model.stageMarks).toEqual([{ stage: 1, end: 2 }])
     expect(byId('stage-1')).toMatchObject({ t: 60, lap: 2 })
     expect(byId('stage-2')).toBeUndefined()
+  })
+
+  it('does not mark the final stage in overtime', () => {
+    // Scheduled to finish on lap 3, run to lap 4.
+    const overtime = buildModel(bundle({ race: { ...bundle().race, stage_ends: [2, 3] } }))
+    expect(overtime.stageMarks).toEqual([{ stage: 1, end: 2 }])
+    expect(overtime.events.find((e) => e.id === 'stage-2')).toBeUndefined()
+  })
+
+  it('does not mark a stage a shortened race never reached', () => {
+    const shortened = buildModel(bundle({ race: { ...bundle().race, stage_ends: [2, 5, 8] } }))
+    expect(shortened.stageMarks).toEqual([{ stage: 1, end: 2 }])
   })
 
   it('times a penalty served on pit road from the stop', () => {

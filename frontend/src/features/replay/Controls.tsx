@@ -111,16 +111,6 @@ function Timeline({ model, t, visibleCars, onSeek }: TimelineProps) {
     return out
   }, [model])
 
-  // Every stage end but the last, skipping any a shortened race never reached.
-  const stageMarks = useMemo(
-    () =>
-      model.stageEnds
-        .slice(0, -1)
-        .map((end, i) => ({ end, stage: i + 1 }))
-        .filter(({ end }) => end < model.totalLaps),
-    [model],
-  )
-
   const penaltyTicks = useMemo(
     () => model.events.filter((e) => e.kind === 'penalty' && e.t > 0 && e.cars.some((c) => visibleCars.has(c))),
     [model, visibleCars],
@@ -144,7 +134,7 @@ function Timeline({ model, t, visibleCars, onSeek }: TimelineProps) {
           />
         ))}
       </div>
-      {stageMarks.map(({ end, stage }) => (
+      {model.stageMarks.map(({ end, stage }) => (
         <div
           key={end}
           className="pointer-events-none absolute top-0 h-full w-px bg-muted/60"

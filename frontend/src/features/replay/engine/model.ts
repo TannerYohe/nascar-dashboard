@@ -153,6 +153,12 @@ export interface RaceEvent {
   text?: string
 }
 
+export interface StageMark {
+  stage: number
+  /** Leader lap the stage ended on. */
+  end: number
+}
+
 export interface PenaltyTiming {
   penalty: Penalty
   given: number
@@ -172,6 +178,8 @@ export interface RaceModel {
   duration: number
   lapFlags: number[]
   stageEnds: number[]
+  /** Stage ends to mark: every stage but the last, if the race got that far. */
+  stageMarks: StageMark[]
   cautions: Caution[]
   events: RaceEvent[]
   penalties: PenaltyTiming[]
@@ -335,6 +343,10 @@ export function buildModel(bundle: ReplayBundle): RaceModel {
     duration,
     lapFlags,
     stageEnds: race.stage_ends,
+    stageMarks: race.stage_ends
+      .slice(0, -1)
+      .map((end, i) => ({ stage: i + 1, end }))
+      .filter(({ end }) => end < totalLaps),
     cautions: bundle.cautions,
     events: [],
     penalties: [],
@@ -447,19 +459,18 @@ function buildEvents(model: RaceModel, bundle: ReplayBundle): RaceEvent[] {
     })
   }
 
-  for (const [i, end] of model.stageEnds.entries()) {
-    if (end >= model.totalLaps) continue
+  for (const { stage, end } of model.stageMarks) {
     const top = bundle.stage_results
-      .filter((s) => s.stage === i + 1)
+      .filter((s) => s.stage === stage)
       .sort((a, b) => (a.position ?? 99) - (b.position ?? 99))[0]
     const winner = top ? model.byDriver.get(top.driver_id) : undefined
     events.push({
-      id: `stage-${i + 1}`,
+      id: `stage-${stage}`,
       t: model.leaderCross[end] ?? 0,
       lap: end,
       kind: 'stage',
       cars: winner?.car != null ? [winner.car] : [],
-      title: `End of Stage ${i + 1}`,
+      title: `End of Stage ${stage}`,
       text: winner ? `#${winner.label} ${winner.name} wins the stage` : undefined,
     })
   }
