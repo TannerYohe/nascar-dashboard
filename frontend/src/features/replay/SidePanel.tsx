@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import { cleanName, clock, lapTime } from '../../lib/format'
 import { FLAG, flagStyle } from '../../lib/racing'
 import { CarChip } from './CarChip'
-import type { PitWindow, RaceEvent, RaceModel } from './engine/model'
+import { penaltyStatusAt, type PitWindow, type RaceEvent, type RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { type SideTab, useReplayStore } from './store'
 
@@ -28,7 +28,7 @@ export function SidePanel({ model, rows, t, visibleCars }: Props) {
   const selected = useReplayStore((s) => s.selected)
   const selectedRow = selected != null ? rows.find((r) => r.frame.car.driverId === selected) : undefined
 
-  const givenSoFar = model.penalties.filter((p) => p.given <= t).length
+  const givenSoFar = model.penalties.filter((p) => penaltyStatusAt(p, t) != null).length
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -138,16 +138,15 @@ function Feed({ model, t, visibleCars }: { model: RaceModel; t: number; visibleC
 
 function Penalties({ model, t, visibleCars }: { model: RaceModel; t: number; visibleCars: Set<number> }) {
   const list = model.penalties
-    .filter((p) => p.given <= t && visibleCars.has(p.penalty.car_number))
+    .map((timing) => ({ ...timing, status: penaltyStatusAt(timing, t) }))
+    .filter((p) => p.status != null && visibleCars.has(p.penalty.car_number))
     .sort((a, b) => b.given - a.given)
   if (!list.length)
     return <Empty>No penalties yet. Penalties appear here as they're handed out, then marked when served.</Empty>
   return (
     <ul className="divide-y divide-line/60">
-      {list.map(({ penalty: p, given, served }) => {
+      {list.map(({ penalty: p, given, status }) => {
         const car = model.byCar.get(p.car_number)
-        const isServed = served != null && served <= t
-        const noRecord = served == null
         return (
           <SeekRow key={p.id} time={given}>
             <div className="flex items-start gap-2.5">
@@ -164,12 +163,12 @@ function Penalties({ model, t, visibleCars }: { model: RaceModel; t: number; vis
                   {p.penalty && <span className="text-ink/80">· {p.penalty}</span>}
                 </div>
                 <div className="mt-1.5">
-                  {isServed ? (
+                  {status === 'served' ? (
                     <Badge tone="good">
                       Served L{p.served_lap}
                       {p.served_how === 'pit_stop' ? ' · pit road' : p.served_how === 'restart' ? ' · restart' : ''}
                     </Badge>
-                  ) : noRecord ? (
+                  ) : status === 'unrecorded' ? (
                     <Badge tone="muted">Serving not recorded</Badge>
                   ) : (
                     <Badge tone="warn">Pending</Badge>
@@ -330,7 +329,9 @@ function DriverCard({ model, row, t }: { model: RaceModel; row: StandingRow; t: 
   const { car } = row.frame
   const select = useReplayStore((s) => s.select)
   const stops = car.pits.filter((w) => w.start <= t).length
-  const penalties = model.penalties.filter((p) => p.penalty.car_number === car.car && p.given <= t).length
+  const penalties = model.penalties.filter(
+    (p) => p.penalty.car_number === car.car && penaltyStatusAt(p, t) != null,
+  ).length
   return (
     <div className="border-b border-line bg-raised/40 px-4 py-3">
       <div className="flex items-start gap-3">

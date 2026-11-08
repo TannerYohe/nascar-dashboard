@@ -364,6 +364,15 @@ function penaltyTiming(model: RaceModel, penalty: Penalty): PenaltyTiming {
   return { penalty, given: lapMidTime(model, penalty.lap), served: servedTime(model, penalty) }
 }
 
+export type PenaltyStatus = 'pending' | 'served' | 'unrecorded'
+
+/** Where a penalty stands at time t, or null before it's given. */
+export function penaltyStatusAt(timing: PenaltyTiming, t: number): PenaltyStatus | null {
+  if (t < timing.given) return null
+  if (timing.served == null) return 'unrecorded'
+  return t < timing.served ? 'pending' : 'served'
+}
+
 /** The start of the pit stop that served it, the restart, or else midway through the lap. */
 function servedTime(model: RaceModel, p: Penalty): number | null {
   if (p.served_lap == null) return null

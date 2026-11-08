@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { cleanName, gap, lapTime, surname } from '../../lib/format'
 import { CarChip } from './CarChip'
-import type { PitProgress, RaceModel } from './engine/model'
+import { type PitProgress, penaltyStatusAt, type RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { useReplayStore } from './store'
 
@@ -37,12 +37,9 @@ export function Leaderboard({ model, rows, t }: Props) {
   const hovered = useReplayStore((s) => s.hovered)
   const { select, hover, toggleHidden } = useReplayStore.getState()
 
-  // Only penalties with a recorded serving time; the rest show as "Serving not recorded" in the side panel.
   const activePenalty = (car: number | null) =>
     car != null &&
-    model.penalties.some(
-      (p) => p.penalty.car_number === car && p.given > 0 && p.given <= t && p.served != null && p.served > t,
-    )
+    model.penalties.some((p) => p.penalty.car_number === car && penaltyStatusAt(p, t) === 'pending')
 
   const visibleRows = filterMode === 'hide' ? rows.filter((r) => !hidden.has(r.frame.car.driverId)) : rows
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Penalty, ReplayBundle, ReplayDriver } from '../../../api/types'
 import { pitStop } from './fixtures'
-import { buildModel, lapMidTime, lastAtOrBefore } from './model'
+import { buildModel, lapMidTime, lastAtOrBefore, penaltyStatusAt } from './model'
 import { frameAt, lapsAt, progressAt, raceStateAt, standingsAt } from './snapshot'
 
 function driver(id: number, car: number, start: number, finish: number, make = 'Ford'): ReplayDriver {
@@ -263,6 +263,15 @@ describe('events', () => {
     expect(model.penalties).toEqual([{ penalty: speeding, given: 15, served: 70 }])
     expect(byId('pen-p1')?.t).toBe(15)
     expect(byId('served-p1')?.t).toBe(70)
+  })
+
+  it('reports where a penalty stands over time', () => {
+    const [timing] = model.penalties
+    expect(penaltyStatusAt(timing, 10)).toBeNull()
+    expect(penaltyStatusAt(timing, 30)).toBe('pending')
+    expect(penaltyStatusAt(timing, 80)).toBe('served')
+    const [unrecorded] = buildModel(bundle({ penalties: [{ ...speeding, served_lap: null, served_how: null }] })).penalties
+    expect(penaltyStatusAt(unrecorded, 30)).toBe('unrecorded')
   })
 
   it('sorts the pre-race note first', () => {
