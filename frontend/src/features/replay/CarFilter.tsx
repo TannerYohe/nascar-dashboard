@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 
 import { cleanName } from '../../lib/format'
 import { MAKES, makeStyle } from '../../lib/racing'
-import { CarChip } from './Leaderboard'
+import { CarChip } from './CarChip'
 import type { RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { useReplayStore } from './store'

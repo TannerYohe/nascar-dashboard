@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 
 import { useReplay } from '../../api/client'
+import { Problem } from '../../components/Problem'
 import type { ReplayBundle } from '../../api/types'
 import { longDate } from '../../lib/format'
 import { flagStyle, seriesName } from '../../lib/racing'
@@ -150,20 +151,6 @@ function Loading() {
       <div className="flex items-center gap-3 text-sm text-muted">
         <span className="h-2 w-2 animate-ping rounded-full bg-accent" />
         Loading race data…
-      </div>
-    </div>
-  )
-}
-
-export function Problem({ title, detail }: { title: string; detail?: string }) {
-  return (
-    <div className="grid flex-1 place-items-center p-6">
-      <div className="max-w-md text-center">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {detail && <p className="mt-2 text-sm text-muted">{detail}</p>}
-        <Link to="/races" className="mt-4 inline-block text-sm font-semibold text-accent hover:underline">
-          Browse races
-        </Link>
       </div>
     </div>
   )

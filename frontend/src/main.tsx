@@ -5,8 +5,9 @@ import { createBrowserRouter, RouterProvider } from 'react-router'
 
 import { Home } from './app/Home'
 import { Layout } from './app/Layout'
+import { Problem } from './components/Problem'
 import { RacesPage } from './features/picker/RacesPage'
-import { Problem, ReplayPage } from './features/replay/ReplayPage'
+import { ReplayPage } from './features/replay/ReplayPage'
 import './index.css'
 
 const queryClient = new QueryClient({

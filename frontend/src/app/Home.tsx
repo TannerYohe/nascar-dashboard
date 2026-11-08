@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
 import { api, useSeasons } from '../api/client'
-import { Problem } from '../features/replay/ReplayPage'
+import { Problem } from '../components/Problem'
 
 /** "/" opens the most recent Cup race that can be replayed. */
 export function Home() {

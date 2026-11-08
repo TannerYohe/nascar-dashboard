@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 
 import { cleanName, clock, lapTime } from '../../lib/format'
 import { FLAG, flagStyle } from '../../lib/racing'
-import { CarChip } from './Leaderboard'
+import { CarChip } from './CarChip'
 import type { PitWindow, RaceEvent, RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { type SideTab, useReplayStore } from './store'

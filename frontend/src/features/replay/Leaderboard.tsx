@@ -3,7 +3,7 @@ import { Eye, EyeOff, Flag } from 'lucide-react'
 import { useState } from 'react'
 
 import { cleanName, gap, lapTime, surname } from '../../lib/format'
-import { makeStyle } from '../../lib/racing'
+import { CarChip } from './CarChip'
 import type { PitProgress, RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
 import { useReplayStore } from './store'
@@ -12,21 +12,6 @@ interface Props {
   model: RaceModel
   rows: StandingRow[]
   t: number
-}
-
-export function CarChip({ label, make, small }: { label: string; make: string | null; small?: boolean }) {
-  const { fill, ink } = makeStyle(make)
-  return (
-    <span
-      className={clsx(
-        'tabular inline-grid shrink-0 place-items-center rounded font-mono font-bold',
-        small ? 'h-5 min-w-6 px-1 text-[11px]' : 'h-6 min-w-8 px-1 text-xs',
-      )}
-      style={{ background: fill, color: ink }}
-    >
-      {label}
-    </span>
-  )
 }
 
 /** PIT while driving down pit road; a running stop clock while in the box. */
