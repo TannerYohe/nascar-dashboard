@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ReplayBundle, ReplayDriver } from '../../../api/types'
+import type { Penalty, PitStop, ReplayBundle, ReplayDriver } from '../../../api/types'
 import { buildModel, lapMidTime, lastAtOrBefore } from './model'
 import { frameAt, lapsAt, progressAt, raceStateAt, standingsAt } from './snapshot'
 
@@ -16,6 +16,31 @@ function driver(id: number, car: number, start: number, finish: number, make = '
     finish_pos: finish,
     finishing_status: 'Running',
     laps_led: null,
+  }
+}
+
+function pitStop(car: number, lap: number, inTime: number, outTime: number): PitStop {
+  return {
+    car_number: car,
+    driver_name: null,
+    lap,
+    leader_lap: lap,
+    in_time: inTime,
+    out_time: outTime,
+    box_in_time: null,
+    box_out_time: null,
+    stop_duration: null,
+    in_travel: null,
+    out_travel: null,
+    total_duration: outTime - inTime,
+    stop_type: 'OTHER',
+    tires: [],
+    in_flag: 1,
+    out_flag: 1,
+    in_rank: null,
+    out_rank: null,
+    positions_gained: null,
+    infraction: null,
   }
 }
 
@@ -143,34 +168,7 @@ describe('positions over time', () => {
   })
 
   it('shows the pit window', () => {
-    const m = buildModel(
-      bundle({
-        pit_stops: [
-          {
-            car_number: 2,
-            driver_name: null,
-            lap: 2,
-            leader_lap: 2,
-            in_time: 70,
-            out_time: 80,
-            box_in_time: null,
-            box_out_time: null,
-            stop_duration: null,
-            in_travel: null,
-            out_travel: null,
-            total_duration: 10,
-            stop_type: 'OTHER',
-            tires: [],
-            in_flag: 1,
-            out_flag: 1,
-            in_rank: null,
-            out_rank: null,
-            positions_gained: null,
-            infraction: null,
-          },
-        ],
-      }),
-    )
+    const m = buildModel(bundle({ pit_stops: [pitStop(2, 2, 70, 80)] }))
     const f = frameAt(m.byCar.get(2)!, 75, m.finishTime)
     expect(f.status).toBe('pit')
     expect(f.pitState?.f).toBeCloseTo(0.5)
@@ -221,5 +219,64 @@ describe('race state', () => {
     expect(raceStateAt(model, 45)).toMatchObject({ lap: 2, flag: 2, stage: 1, lapsToGo: 3 })
     expect(raceStateAt(model, 95)).toMatchObject({ lap: 4, flag: 4, stage: 2 })
     expect(raceStateAt(model, 130)).toMatchObject({ finished: true, flag: 5, lapsToGo: 0 })
+  })
+})
+
+describe('events', () => {
+  const speeding: Penalty = {
+    id: 'p1',
+    car_number: 2,
+    driver_id: 2,
+    lap: 1,
+    infraction: 'Pit road speeding',
+    penalty: 'Pass-through',
+    detail: null,
+    source: 'lap_note',
+    served_lap: 2,
+    served_how: 'pit_stop',
+  }
+  // Leader laps end at 30, 60, 90 and 120. Lap 2 is under caution.
+  const model = buildModel(
+    bundle({
+      cautions: [
+        { start_lap: 2, end_lap: 2, flag_state: 2, reason: 'Debris', comment: 'Turn 3', beneficiary_car_number: null },
+      ],
+      leaders: [
+        { start_lap: 1, end_lap: 2, car_number: 1 },
+        { start_lap: 3, end_lap: 4, car_number: 2 },
+      ],
+      pit_stops: [pitStop(2, 2, 70, 80)],
+      penalties: [speeding],
+      notes: [
+        { lap: 2, note_id: 1, flag_state: 2, kind: 'race', note: 'Caution for debris.', driver_ids: [] },
+        { lap: 0, note_id: 1, flag_state: 9, kind: 'pre_race', note: '#2 to the rear.', driver_ids: [2] },
+      ],
+    }),
+  )
+  const byId = (id: string) => model.events.find((e) => e.id === id)
+
+  it('puts the caution and the restart at the start of their laps', () => {
+    expect(byId('flag-2')).toMatchObject({ t: 30, title: 'Caution', text: 'Debris · Turn 3' })
+    expect(byId('flag-3')).toMatchObject({ t: 60, title: 'Green flag' })
+  })
+
+  it('marks a lead change at the start of the lap', () => {
+    expect(byId('lead-3-2')).toMatchObject({ t: 60, cars: [2] })
+    expect(byId('lead-1-1')).toBeUndefined()
+  })
+
+  it('marks stage ends but not the final stage', () => {
+    expect(byId('stage-1')).toMatchObject({ t: 60, lap: 2 })
+    expect(byId('stage-2')).toBeUndefined()
+  })
+
+  it('times a penalty served on pit road from the stop', () => {
+    expect(model.penalties).toEqual([{ penalty: speeding, given: 15, served: 70 }])
+    expect(byId('pen-p1')?.t).toBe(15)
+    expect(byId('served-p1')?.t).toBe(70)
+  })
+
+  it('sorts the pre-race note first', () => {
+    expect(model.events[0]).toMatchObject({ kind: 'note', title: 'Pre-race', cars: [2] })
   })
 })
