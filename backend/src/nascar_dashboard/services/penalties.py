@@ -14,7 +14,7 @@ import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
-from ..schemas import PenaltySource, ServedHow
+from ..schemas import Penalty
 from .flags import GREEN, WHITE
 
 CAR = re.compile(r"#(\d{1,3})\b")
@@ -109,20 +109,6 @@ class PitVisit:
     lap: int | None
     infraction: str | None
     tires_changed: int
-
-
-@dataclass
-class ParsedPenalty:
-    id: str
-    car_number: int
-    driver_id: int | None
-    lap: int
-    infraction: str
-    penalty: str | None
-    detail: str | None
-    source: PenaltySource
-    served_lap: int | None = None
-    served_how: ServedHow | None = None
 
 
 @dataclass(frozen=True)
@@ -256,13 +242,13 @@ def build_penalties(
     pits: Iterable[PitVisit],
     flags: Sequence[int],
     driver_by_car: dict[int, int],
-) -> list[ParsedPenalty]:
+) -> list[Penalty]:
     """Merge official infractions with note-derived ones and work out when each was served."""
-    penalties: list[ParsedPenalty] = []
+    penalties: list[Penalty] = []
     for o in official:
         text = " ".join(filter(None, [o.infraction, o.penalty, o.notes]))
         penalties.append(
-            ParsedPenalty(
+            Penalty(
                 id=o.uid,
                 car_number=o.car_number,
                 driver_id=o.driver_id or driver_by_car.get(o.car_number),
@@ -280,7 +266,7 @@ def build_penalties(
         if any(p.car_number == e.car_number and abs(p.lap - e.lap) <= 1 for p in penalties):
             continue
         penalties.append(
-            ParsedPenalty(
+            Penalty(
                 id=_uid("note", e.key, e.car_number),
                 car_number=e.car_number,
                 driver_id=driver_by_car.get(e.car_number),
@@ -299,7 +285,7 @@ def build_penalties(
             continue
         assert p.infraction is not None
         penalties.append(
-            ParsedPenalty(
+            Penalty(
                 id=_uid("pit", p.car_number, lap, p.infraction),
                 car_number=p.car_number,
                 driver_id=driver_by_car.get(p.car_number),
@@ -317,7 +303,7 @@ def build_penalties(
 
 
 def _match_served(
-    penalties: list[ParsedPenalty],
+    penalties: list[Penalty],
     served: list[NoteEvent],
     pits: list[PitVisit],
     flags: Sequence[int],
@@ -352,12 +338,12 @@ def _match_served(
                 p.served_lap, p.served_how = pits[stop].lap, "pit_stop"
 
 
-def _served_at_restart(p: ParsedPenalty, flags: Sequence[int]) -> None:
+def _served_at_restart(p: Penalty, flags: Sequence[int]) -> None:
     p.served_lap = _next_restart(p.lap, flags)
     p.served_how = "restart" if p.served_lap is not None else None
 
 
-def _serving_stop(p: ParsedPenalty, pits: list[PitVisit], used: set[int]) -> int | None:
+def _serving_stop(p: Penalty, pits: list[PitVisit], used: set[int]) -> int | None:
     """Index of the pit stop that served a pit-road penalty, if the data shows one.
 
     The car's next stop within SERVE_WINDOW laps that the pit report tagged with

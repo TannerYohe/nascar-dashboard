@@ -26,7 +26,6 @@ from ..schemas import (
     LapNote,
     Leader,
     NoteKind,
-    Penalty,
     PitStop,
     RaceDetail,
     ReplayBundle,
@@ -37,7 +36,6 @@ from .flags import CHECKERED, GREEN, RED, WHITE, YELLOW, CautionSpan, FlagNote, 
 from .penalties import (
     NoteText,
     OfficialInfraction,
-    ParsedPenalty,
     PitVisit,
     build_penalties,
 )
@@ -202,21 +200,6 @@ def _measured(value: float | None) -> float | None:
     return None if value is None or value < 0 else value
 
 
-def _penalty(p: ParsedPenalty) -> Penalty:
-    return Penalty(
-        id=p.id,
-        car_number=p.car_number,
-        driver_id=p.driver_id,
-        lap=p.lap,
-        infraction=p.infraction,
-        penalty=p.penalty,
-        detail=p.detail,
-        source=p.source,
-        served_lap=p.served_lap,
-        served_how=p.served_how,
-    )
-
-
 def build_replay(session: Session, race_id: int) -> ReplayBundle | None:
     race: RaceDetail | None = get_race(session, race_id)
     if race is None:
@@ -298,7 +281,7 @@ def build_replay(session: Session, race_id: int) -> ReplayBundle | None:
             )
         ],
         pit_stops=pit_stops,
-        penalties=[_penalty(p) for p in penalties],
+        penalties=penalties,
         notes=notes,
         stage_results=[
             StageResult(

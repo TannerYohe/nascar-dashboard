@@ -136,8 +136,8 @@ class Penalty(BaseModel):
     detail: str | None
     source: PenaltySource
     # Leader lap it was served on, when the data shows it.
-    served_lap: int | None
-    served_how: ServedHow | None
+    served_lap: int | None = None
+    served_how: ServedHow | None = None
 
 
 NoteKind = Literal["race", "pre_race", "trivia"]
