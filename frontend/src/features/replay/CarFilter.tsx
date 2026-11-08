@@ -4,7 +4,7 @@ import { Check, ListFilter, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { cleanName } from '../../lib/format'
-import { MAKES, makeColor } from '../../lib/racing'
+import { MAKES, makeStyle } from '../../lib/racing'
 import { CarChip } from './Leaderboard'
 import type { RaceModel } from './engine/model'
 import type { StandingRow } from './engine/snapshot'
@@ -79,7 +79,7 @@ export function CarFilter({ model, rows }: Props) {
               <Chip onClick={() => onlyThese(rows.slice(0, 10).map((r) => r.frame.car.driverId))}>Top 10 now</Chip>
               {MAKES.map((make) => (
                 <Chip key={make} onClick={() => onlyThese(all.filter((c) => c.make === make).map((c) => c.driverId))}>
-                  <span className="h-2 w-2 rounded-full" style={{ background: makeColor(make) }} />
+                  <span className="h-2 w-2 rounded-full" style={{ background: makeStyle(make).fill }} />
                   {make}
                 </Chip>
               ))}

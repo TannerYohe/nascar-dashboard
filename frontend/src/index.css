@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
-/* A dark "pit wall" palette. Surfaces step up in lightness; flag and
-   manufacturer colors are the only saturated hues on the page. */
+/* A dark "pit wall" palette. Surfaces step up in lightness; flag colors and
+   the manufacturer colors in lib/racing.ts are the only saturated hues. */
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -22,11 +22,6 @@
   --color-flag-yellow: #facc15;
   --color-flag-red: #ef4444;
   --color-flag-white: #f4f4f5;
-
-  --color-chevrolet: #f2b705;
-  --color-ford: #3b82f6;
-  --color-toyota: #ef233c;
-  --color-other-make: #a1a1aa;
 
   --color-best-overall: #c084fc;
   --color-best-personal: #4ade80;

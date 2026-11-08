@@ -48,29 +48,20 @@ export function flagStyle(state: number): FlagStyle {
 
 export const MAKES = ['Chevrolet', 'Ford', 'Toyota'] as const
 
-export function makeColor(make: string | null): string {
-  switch (make) {
-    case 'Chevrolet':
-      return 'var(--color-chevrolet)'
-    case 'Ford':
-      return 'var(--color-ford)'
-    case 'Toyota':
-      return 'var(--color-toyota)'
-    default:
-      return 'var(--color-other-make)'
-  }
+export interface MakeStyle {
+  /** Car color. */
+  fill: string
+  /** Text color on top of it. */
+  ink: string
 }
 
-/** Raw hex for canvas/SVG attributes where CSS variables are awkward. */
-export function makeHex(make: string | null): { fill: string; ink: string } {
-  switch (make) {
-    case 'Chevrolet':
-      return { fill: '#f2b705', ink: '#1a1300' }
-    case 'Ford':
-      return { fill: '#3b82f6', ink: '#ffffff' }
-    case 'Toyota':
-      return { fill: '#ef233c', ink: '#ffffff' }
-    default:
-      return { fill: '#a1a1aa', ink: '#111111' }
-  }
+const MAKE_STYLE: Record<string, MakeStyle> = {
+  Chevrolet: { fill: '#f2b705', ink: '#1a1300' },
+  Ford: { fill: '#3b82f6', ink: '#ffffff' },
+  Toyota: { fill: '#ef233c', ink: '#ffffff' },
+}
+const OTHER_MAKE: MakeStyle = { fill: '#a1a1aa', ink: '#111111' }
+
+export function makeStyle(make: string | null): MakeStyle {
+  return (make != null && MAKE_STYLE[make]) || OTHER_MAKE
 }

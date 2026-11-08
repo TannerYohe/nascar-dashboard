@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { makeHex } from '../../lib/racing'
+import { makeStyle } from '../../lib/racing'
 import { cleanName } from '../../lib/format'
 import type { RaceModel } from './engine/model'
 import { frameAt } from './engine/snapshot'
@@ -136,7 +136,7 @@ function Track({ model, geometry }: { model: RaceModel; geometry: TrackGeometry 
         />
 
         {order.map((car) => {
-          const { fill, ink } = makeHex(car.make)
+          const { fill, ink } = makeStyle(car.make)
           const isSel = selected === car.driverId
           const isHover = hovered === car.driverId
           return (
