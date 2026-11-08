@@ -33,15 +33,21 @@ from ..schemas import (
     ReplayDriver,
     StageResult,
 )
-from .flags import CautionSpan, FlagNote, lap_flags
-from .penalties import NoteText, OfficialInfraction, PitVisit, build_penalties
+from .flags import CHECKERED, GREEN, RED, WHITE, YELLOW, CautionSpan, FlagNote, lap_flags
+from .penalties import (
+    NoteText,
+    OfficialInfraction,
+    ParsedPenalty,
+    PitVisit,
+    build_penalties,
+)
 from .races import get_race
 
 # The lap-times feed abbreviates; race results spell it out.
 MANUFACTURERS = {"Chv": "Chevrolet", "Frd": "Ford", "Tyt": "Toyota", "Dge": "Dodge"}
 # Lap-note flag states that describe a lap being raced (everything else is a
 # pre-race state or 1000, which the feed uses for trivia).
-RACE_NOTE_FLAGS = {1, 2, 3, 4, 5}
+RACE_NOTE_FLAGS = {GREEN, YELLOW, RED, WHITE, CHECKERED}
 
 Tire = Literal["LF", "RF", "LR", "RR"]
 
@@ -200,6 +206,21 @@ def _measured(value: float | None) -> float | None:
     return None if value is None or value < 0 else value
 
 
+def _penalty(p: ParsedPenalty) -> Penalty:
+    return Penalty(
+        id=p.id,
+        car_number=p.car_number,
+        driver_id=p.driver_id,
+        lap=p.lap,
+        infraction=p.infraction,
+        penalty=p.penalty,
+        detail=p.detail,
+        source=p.source,
+        served_lap=p.served_lap,
+        served_how=p.served_how,
+    )
+
+
 def build_replay(
     session: Session, race_id: int, since_lap: int | None = None
 ) -> ReplayBundle | None:
@@ -281,7 +302,7 @@ def build_replay(
             )
         ],
         pit_stops=pit_stops,
-        penalties=[Penalty(**vars(p)) for p in penalties],
+        penalties=[_penalty(p) for p in penalties],
         notes=notes,
         stage_results=[
             StageResult(

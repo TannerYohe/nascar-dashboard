@@ -14,6 +14,7 @@ import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
+from ..schemas import PenaltySource, ServedHow
 from .flags import GREEN, WHITE
 
 CAR = re.compile(r"#(\d{1,3})\b")
@@ -119,9 +120,9 @@ class ParsedPenalty:
     infraction: str
     penalty: str | None
     detail: str | None
-    source: str
+    source: PenaltySource
     served_lap: int | None = None
-    served_how: str | None = None
+    served_how: ServedHow | None = None
 
 
 @dataclass(frozen=True)
