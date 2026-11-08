@@ -342,14 +342,24 @@ export function buildModel(bundle: ReplayBundle): RaceModel {
     pitLine: null,
   }
   model.pitLine = pitLineFraction(cars)
+  model.penalties = bundle.penalties.map((p) => penaltyTiming(model, p))
   model.events = buildEvents(model, bundle)
-  const eventTime = new Map(model.events.map((e) => [e.id, e.t]))
-  model.penalties = bundle.penalties.map((p) => ({
-    penalty: p,
-    given: eventTime.get(`pen-${p.id}`) ?? 0,
-    served: eventTime.get(`served-${p.id}`) ?? null,
-  }))
   return model
+}
+
+/** When a penalty was given (midway through its lap) and when it was served. */
+function penaltyTiming(model: RaceModel, penalty: Penalty): PenaltyTiming {
+  return { penalty, given: lapMidTime(model, penalty.lap), served: servedTime(model, penalty) }
+}
+
+/** The start of the pit stop that served it, the restart, or else midway through the lap. */
+function servedTime(model: RaceModel, p: Penalty): number | null {
+  if (p.served_lap == null) return null
+  if (p.served_how === 'pit_stop') {
+    const stop = model.byCar.get(p.car_number)?.pits.find((w) => w.stop.lap === p.served_lap)
+    if (stop) return stop.start
+  }
+  return p.served_how === 'restart' ? lapStartTime(model, p.served_lap) : lapMidTime(model, p.served_lap)
 }
 
 /** When the leader started lap `lap` (lap 1 starts at the green). */
@@ -449,25 +459,21 @@ function buildEvents(model: RaceModel, bundle: ReplayBundle): RaceEvent[] {
     })
   }
 
-  for (const p of bundle.penalties) {
+  for (const { penalty: p, given, served } of model.penalties) {
     const what = [p.infraction, p.penalty].filter(Boolean).join(' · ')
     events.push({
       id: `pen-${p.id}`,
-      t: lapMidTime(model, p.lap),
+      t: given,
       lap: p.lap,
       kind: 'penalty',
       cars: [p.car_number],
       title: `Penalty #${p.car_number}`,
       text: what,
     })
-    if (p.served_lap != null) {
-      const stop =
-        p.served_how === 'pit_stop'
-          ? model.byCar.get(p.car_number)?.pits.find((w) => w.stop.lap === p.served_lap)
-          : undefined
+    if (served != null && p.served_lap != null) {
       events.push({
         id: `served-${p.id}`,
-        t: stop ? stop.start : p.served_how === 'restart' ? lapStartTime(model, p.served_lap) : lapMidTime(model, p.served_lap),
+        t: served,
         lap: p.served_lap,
         kind: 'served',
         cars: [p.car_number],
