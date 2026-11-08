@@ -65,7 +65,7 @@ export interface ReplayDriver {
 
 export interface DriverLaps {
   driver_id: number
-  /** Index i is lap `from_lap + i`. Lap 0 is the grid. */
+  /** Index i is lap i. Lap 0 is the grid. */
   times: (number | null)[]
   positions: (number | null)[]
 }
@@ -143,7 +143,6 @@ export interface StageResult {
 export interface ReplayBundle {
   race: RaceDetail
   finished: boolean
-  from_lap: number
   drivers: ReplayDriver[]
   laps: DriverLaps[]
   lap_flags: number[]

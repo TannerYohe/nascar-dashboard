@@ -23,8 +23,7 @@ export const api = {
   seasons: () => get<Season[]>('/seasons'),
   races: (year?: number, series?: number) => get<RaceSummary[]>('/races', { year, series }),
   race: (raceId: number) => get<RaceDetail>(`/races/${raceId}`),
-  replay: (raceId: number, sinceLap?: number) =>
-    get<ReplayBundle>(`/races/${raceId}/replay`, { since_lap: sinceLap }),
+  replay: (raceId: number) => get<ReplayBundle>(`/races/${raceId}/replay`),
 }
 
 const HOUR = 60 * 60 * 1000

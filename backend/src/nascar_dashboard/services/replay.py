@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Literal, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import (
@@ -100,10 +100,10 @@ def _drivers(session: Session, race_id: int) -> list[ReplayDriver]:
     return sorted(drivers.values(), key=lambda d: (d.finish_pos is None, d.finish_pos or 0))
 
 
-def _laps(session: Session, race_id: int, from_lap: int) -> tuple[list[DriverLaps], int]:
+def _laps(session: Session, race_id: int) -> tuple[list[DriverLaps], int]:
     rows = session.execute(
         select(RaceLap.driver_id, RaceLap.lap, RaceLap.lap_time, RaceLap.running_pos)
-        .where(RaceLap.race_id == race_id, RaceLap.lap >= from_lap)
+        .where(RaceLap.race_id == race_id)
         .order_by(RaceLap.driver_id, RaceLap.lap)
     ).all()
     by_driver: dict[int, list[tuple[int, float | None, int | None]]] = defaultdict(list)
@@ -113,18 +113,14 @@ def _laps(session: Session, race_id: int, from_lap: int) -> tuple[list[DriverLap
         max_lap = max(max_lap, lap)
     out = []
     for driver_id, laps in by_driver.items():
-        length = laps[-1][0] - from_lap + 1
+        length = laps[-1][0] + 1
         times: list[float | None] = [None] * length
         positions: list[int | None] = [None] * length
         for lap, lap_time, pos in laps:
-            times[lap - from_lap] = lap_time
-            positions[lap - from_lap] = pos
+            times[lap] = lap_time
+            positions[lap] = pos
         out.append(DriverLaps(driver_id=driver_id, times=times, positions=positions))
     return out, max_lap
-
-
-def _max_lap(session: Session, race_id: int) -> int:
-    return session.scalar(select(func.max(RaceLap.lap)).where(RaceLap.race_id == race_id)) or 0
 
 
 def _notes(session: Session, race_id: int) -> list[LapNote]:
@@ -221,18 +217,13 @@ def _penalty(p: ParsedPenalty) -> Penalty:
     )
 
 
-def build_replay(
-    session: Session, race_id: int, since_lap: int | None = None
-) -> ReplayBundle | None:
+def build_replay(session: Session, race_id: int) -> ReplayBundle | None:
     race: RaceDetail | None = get_race(session, race_id)
     if race is None:
         return None
-    from_lap = 0 if since_lap is None else since_lap + 1
 
     drivers = _drivers(session, race_id)
-    laps, max_lap = _laps(session, race_id, from_lap)
-    if since_lap is not None:
-        max_lap = max(max_lap, _max_lap(session, race_id))
+    laps, max_lap = _laps(session, race_id)
     total_laps = max(race.actual_laps or 0, max_lap)
 
     cautions = [
@@ -288,7 +279,6 @@ def build_replay(
     return ReplayBundle(
         race=race,
         finished=race.status == "finished",
-        from_lap=from_lap,
         drivers=drivers,
         laps=laps,
         lap_flags=flags,

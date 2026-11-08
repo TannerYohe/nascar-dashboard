@@ -34,7 +34,6 @@ function model(times: (number | null)[], pits: PitStop[]): RaceModel {
   const bundle = {
     race: { track_length_mi: 1.5, actual_laps: times.length - 1, stage_ends: [] },
     finished: true,
-    from_lap: 0,
     drivers: [
       {
         driver_id: 1,

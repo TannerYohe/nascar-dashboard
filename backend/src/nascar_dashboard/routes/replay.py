@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from threading import Lock
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from ..db import get_session
@@ -56,23 +56,17 @@ cache = _BundleCache(CACHE_SIZE)
     response_model=ReplayBundle,
     responses={200: {"content": {"application/json": {}}}},
 )
-def replay(
-    race_id: int,
-    since_lap: int | None = Query(
-        default=None, ge=0, description="Only laps after this one (for following a live race)."
-    ),
-    session: Session = Depends(get_session),
-) -> Response:
-    if since_lap is None and (body := cache.get(race_id)) is not None:
+def replay(race_id: int, session: Session = Depends(get_session)) -> Response:
+    if (body := cache.get(race_id)) is not None:
         return Response(
             body, media_type="application/json", headers={"Cache-Control": FINISHED_CACHE}
         )
 
-    bundle = build_replay(session, race_id, since_lap)
+    bundle = build_replay(session, race_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail="Race not found")
     body = bundle.model_dump_json().encode()
-    if bundle.finished and since_lap is None:
+    if bundle.finished:
         cache.put(race_id, body)
     return Response(
         body,

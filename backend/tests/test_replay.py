@@ -3,8 +3,8 @@ from fastapi.testclient import TestClient
 from conftest import RACE_ID
 
 
-def _bundle(client: TestClient, **params: int) -> dict:
-    response = client.get(f"/api/races/{RACE_ID}/replay", params=params)
+def _bundle(client: TestClient) -> dict:
+    response = client.get(f"/api/races/{RACE_ID}/replay")
     assert response.status_code == 200
     return response.json()
 
@@ -18,22 +18,11 @@ def test_bundle_has_drivers_in_finishing_order(client: TestClient) -> None:
 
 def test_laps_are_indexed_by_lap_number(client: TestClient) -> None:
     body = _bundle(client)
-    assert body["from_lap"] == 0
     laps = {d["driver_id"]: d for d in body["laps"]}
     assert laps[1]["times"][0] is None  # lap 0 is the grid
     assert laps[1]["positions"][0] == 2
     assert laps[1]["times"][1:] == [30.0, 29.0, 45.0, 50.0, 29.5, 29.0]
     assert len(laps[3]["times"]) == 4  # retired after lap 3
-
-
-def test_since_lap_returns_only_newer_laps(client: TestClient) -> None:
-    body = _bundle(client, since_lap=4)
-    assert body["from_lap"] == 5
-    laps = {d["driver_id"]: d for d in body["laps"]}
-    assert laps[1]["times"] == [29.5, 29.0]
-    assert 3 not in laps
-    # The flag timeline still covers the whole race.
-    assert len(body["lap_flags"]) == 7
 
 
 def test_flag_timeline(client: TestClient) -> None:

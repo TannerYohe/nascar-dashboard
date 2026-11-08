@@ -74,7 +74,7 @@ class ReplayDriver(BaseModel):
 
 
 class DriverLaps(BaseModel):
-    """One driver's timing. Index i is lap `ReplayBundle.from_lap + i`."""
+    """One driver's timing. Index i is lap i; lap 0 is the grid."""
 
     driver_id: int
     times: list[float | None]
@@ -163,8 +163,6 @@ class StageResult(BaseModel):
 class ReplayBundle(BaseModel):
     race: RaceDetail
     finished: bool
-    # First lap included in DriverLaps (0 for a full bundle; since_lap + 1 otherwise).
-    from_lap: int
     drivers: list[ReplayDriver]
     laps: list[DriverLaps]
     # Flag for each lap, index = lap number (index 0 is the pre-race grid).

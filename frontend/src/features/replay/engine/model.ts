@@ -215,15 +215,13 @@ function carLabel(d: ReplayDriver): string {
 export function buildModel(bundle: ReplayBundle): RaceModel {
   const { race } = bundle
   const lapsByDriver = new Map(bundle.laps.map((l) => [l.driver_id, l]))
-  const offset = bundle.from_lap
 
-  // Every car's recorded lap times, indexed by absolute lap number.
+  // Every car's recorded lap times, indexed by lap number.
   const raw = new Map<number, (number | null)[]>()
   let maxLap = 0
   for (const d of bundle.drivers) {
     const laps = lapsByDriver.get(d.driver_id)
-    const times: (number | null)[] = []
-    if (laps) laps.times.forEach((t, i) => (times[i + offset] = t))
+    const times = laps?.times ?? []
     raw.set(d.driver_id, times)
     maxLap = Math.max(maxLap, times.length - 1)
   }
@@ -251,8 +249,7 @@ export function buildModel(bundle: ReplayBundle): RaceModel {
   const cars: CarModel[] = bundle.drivers.map((d) => {
     const rawTimes = raw.get(d.driver_id) ?? []
     const laps = lapsByDriver.get(d.driver_id)
-    const positions: (number | null)[] = []
-    laps?.positions.forEach((p, i) => (positions[i + offset] = p))
+    const positions = laps?.positions ?? []
 
     let lastLap = 0
     for (let n = rawTimes.length - 1; n >= 1; n--) {
