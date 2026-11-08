@@ -70,9 +70,7 @@ function carMotion(model: RaceModel, car: CarModel, layout: PitLayout): CarMotio
   const pits: PitWindow[] = []
   const pitAnchors: Anchor[] = []
   for (const w of car.pits) {
-    // Laps done when the car turned onto pit road, and so where that is.
-    const done = Math.max(0, lastAtOrBefore(car.cross, w.start))
-    const pIn = done + layout.entry
+    const pIn = lapsBeforePitEntry(model, car, w, layout) + layout.entry
     pits.push(w)
     pitAnchors.push({ t: w.start, p: pIn, kind: 'pitIn' }, { t: w.end, p: pIn + span, kind: 'pitOut' })
   }
@@ -134,6 +132,19 @@ function carMotion(model: RaceModel, car: CarModel, layout: PitLayout): CarMotio
     })
   }
   return { car, segments, pits }
+}
+
+/**
+ * Laps the car had completed when it reached pit entry. The pit line comes
+ * from the whole field, so a stop's pit-in time can fall on either side of
+ * this car's crossing; pick the lap count that puts pit entry nearest where
+ * the car would be at its normal pace.
+ */
+function lapsBeforePitEntry(model: RaceModel, car: CarModel, w: PitWindow, layout: PitLayout): number {
+  const n = Math.max(0, lastAtOrBefore(car.cross, w.start))
+  const pace = cruiseLapTime(model, car, [n, n - 1, n - 2])
+  const progress = n + (w.start - car.cross[n]) / pace
+  return Math.max(0, Math.round(progress - layout.entry))
 }
 
 function order(kind: AnchorKind): number {

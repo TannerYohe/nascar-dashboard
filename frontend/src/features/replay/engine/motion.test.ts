@@ -143,4 +143,34 @@ describe('motion', () => {
     const at = placementAt(motion, 45)
     expect(at.on === 'track' && at.progress).toBeCloseTo(1.5)
   })
+
+  it('enters pit road after the line when pit-in comes just before the crossing', () => {
+    // Pit entry just past the line, but pit-in at 89.8 is a moment before the lap 3 crossing at 90.
+    const m = model([null, 30, 30, 30, 46, 30], [stop(9, 89.8, 110)])
+    const motion = buildMotion(m, { entry: 0.02, exit: 0.12 }).get(1)!
+    const atIn = placementAt(motion, 89.79)
+    expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(3.02, 1)
+    const out = placementAt(motion, 110.001)
+    expect(out.on === 'track' && out.progress).toBeCloseTo(3.12, 2)
+    expect(placementAt(motion, 136)).toEqual({ on: 'track', progress: 4 })
+  })
+
+  it('enters pit road before the line when pit-in comes just after the crossing', () => {
+    // Pit entry just before the line, but pit-in at 90.4 is a moment after the lap 3 crossing at 90.
+    const m = model([null, 30, 30, 30, 48, 30], [stop(9, 90.4, 110)])
+    const motion = buildMotion(m, { entry: 0.98, exit: 0.08 }).get(1)!
+    const atIn = placementAt(motion, 90.39)
+    expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(2.98, 1)
+    const out = placementAt(motion, 110.001)
+    expect(out.on === 'track' && out.progress).toBeCloseTo(3.08, 2)
+    expect(placementAt(motion, 138)).toEqual({ on: 'track', progress: 4 })
+  })
+
+  it('finds pit entry late in a long in-lap on a short track', () => {
+    // 15 s laps, entry at 0.9: the car reaches it 13.5 s into lap 3, which then takes 45 s.
+    const m = model([null, 15, 15, 45, 15], [stop(9, 43.5, 70)])
+    const motion = buildMotion(m, { entry: 0.9, exit: 0.1 }).get(1)!
+    const atIn = placementAt(motion, 43.49)
+    expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(2.9, 2)
+  })
 })
