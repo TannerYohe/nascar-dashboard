@@ -62,6 +62,12 @@ function sample(d: string, count: number, closed: boolean): Sampled {
     points[i * 2] = p.x
     points[i * 2 + 1] = p.y
   }
+  return sampledFromPoints(points, length, closed)
+}
+
+/** A path from points evenly spaced along it, with normals pointing to the inside. */
+export function sampledFromPoints(points: Float32Array, length: number, closed: boolean): Sampled {
+  const count = points.length / 2
   // Signed area tells which side is inside: with y pointing down, a negative
   // area means the loop runs counterclockwise on screen and the inside is to
   // the left of travel.
