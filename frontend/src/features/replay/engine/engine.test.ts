@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { Penalty, PitStop, ReplayBundle, ReplayDriver } from '../../../api/types'
+import type { Penalty, ReplayBundle, ReplayDriver } from '../../../api/types'
+import { pitStop } from './fixtures'
 import { buildModel, lapMidTime, lastAtOrBefore } from './model'
 import { frameAt, lapsAt, progressAt, raceStateAt, standingsAt } from './snapshot'
 
@@ -16,31 +17,6 @@ function driver(id: number, car: number, start: number, finish: number, make = '
     finish_pos: finish,
     finishing_status: 'Running',
     laps_led: null,
-  }
-}
-
-function pitStop(car: number, lap: number, inTime: number, outTime: number): PitStop {
-  return {
-    car_number: car,
-    driver_name: null,
-    lap,
-    leader_lap: lap,
-    in_time: inTime,
-    out_time: outTime,
-    box_in_time: null,
-    box_out_time: null,
-    stop_duration: null,
-    in_travel: null,
-    out_travel: null,
-    total_duration: outTime - inTime,
-    stop_type: 'OTHER',
-    tires: [],
-    in_flag: 1,
-    out_flag: 1,
-    in_rank: null,
-    out_rank: null,
-    positions_gained: null,
-    infraction: null,
   }
 }
 
@@ -168,7 +144,7 @@ describe('positions over time', () => {
   })
 
   it('shows the pit window', () => {
-    const m = buildModel(bundle({ pit_stops: [pitStop(2, 2, 70, 80)] }))
+    const m = buildModel(bundle({ pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2 })] }))
     const f = frameAt(m.byCar.get(2)!, 75, m.finishTime)
     expect(f.status).toBe('pit')
     expect(f.pitState?.f).toBeCloseTo(0.5)
@@ -245,7 +221,7 @@ describe('events', () => {
         { start_lap: 1, end_lap: 2, car_number: 1 },
         { start_lap: 3, end_lap: 4, car_number: 2 },
       ],
-      pit_stops: [pitStop(2, 2, 70, 80)],
+      pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2 })],
       penalties: [speeding],
       notes: [
         { lap: 2, note_id: 1, flag_state: 2, kind: 'race', note: 'Caution for debris.', driver_ids: [] },

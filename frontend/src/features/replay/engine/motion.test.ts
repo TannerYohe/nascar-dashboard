@@ -1,33 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import type { PitStop, ReplayBundle } from '../../../api/types'
+import { pitStop } from './fixtures'
 import { buildModel, pitLineFraction, pitProgress, type RaceModel } from './model'
 import { buildMotion, eased, placementAt } from './motion'
-
-function stop(car: number, inTime: number, outTime: number, box?: [number, number]): PitStop {
-  return {
-    car_number: car,
-    driver_name: null,
-    lap: null,
-    leader_lap: null,
-    in_time: inTime,
-    out_time: outTime,
-    box_in_time: box?.[0] ?? null,
-    box_out_time: box?.[1] ?? null,
-    stop_duration: box ? box[1] - box[0] : null,
-    in_travel: null,
-    out_travel: null,
-    total_duration: outTime - inTime,
-    stop_type: 'FOUR_WHEEL_CHANGE',
-    tires: [],
-    in_flag: 1,
-    out_flag: 1,
-    in_rank: null,
-    out_rank: null,
-    positions_gained: null,
-    infraction: null,
-  }
-}
 
 /** One car, 30-second laps, with a slow lap 3 holding a pit stop. */
 function model(times: (number | null)[], pits: PitStop[]): RaceModel {
@@ -86,7 +62,7 @@ describe('eased', () => {
 })
 
 describe('pitProgress', () => {
-  const m = model([null, 30, 30, 50, 30], [stop(9, 70, 100, [80, 90])])
+  const m = model([null, 30, 30, 50, 30], [pitStop(9, 70, 100, { box_in_time: 80, box_out_time: 90 })])
   const w = m.cars[0].pits[0]
 
   it('drives in, stops, and drives out', () => {
@@ -99,14 +75,14 @@ describe('pitProgress', () => {
 describe('start/finish from timing', () => {
   it('finds the line past pit exit when cars cross just after leaving', () => {
     // Lap 3 ends at 110, two seconds after pit exit at 108.
-    const pits = [1, 2, 3, 4, 5].map(() => stop(9, 78, 108, [88, 98]))
+    const pits = [1, 2, 3, 4, 5].map(() => pitStop(9, 78, 108, { box_in_time: 88, box_out_time: 98 }))
     const m = model([null, 30, 30, 50, 30], pits)
     expect(pitLineFraction(m.cars)).toBeCloseTo(1 + 2 / 20)
   })
 
   it('finds the line on pit road from where crossings fall', () => {
     // Crossing at 110 on a stop from 100 to 120, box 112-116: 10 of 16 moving seconds in.
-    const pits = [1, 2, 3, 4, 5].map(() => stop(9, 100, 120, [112, 116]))
+    const pits = [1, 2, 3, 4, 5].map(() => pitStop(9, 100, 120, { box_in_time: 112, box_out_time: 116 }))
     const m = model([null, 30, 30, 50, 30], pits)
     expect(pitLineFraction(m.cars)).toBeCloseTo(10 / 16)
   })
@@ -115,7 +91,7 @@ describe('start/finish from timing', () => {
 describe('motion', () => {
   it('reaches pit entry at pit-in and pit exit at pit-out when the line is after pit road', () => {
     // Crossings at 30, 60, 110, 140. Pit road from 0.8 to 0.95 of the lap, stop 80-100.
-    const m = model([null, 30, 30, 50, 30], [stop(9, 80, 100, [86, 94])])
+    const m = model([null, 30, 30, 50, 30], [pitStop(9, 80, 100, { box_in_time: 86, box_out_time: 94 })])
     const motion = buildMotion(m, { entry: 0.8, exit: 0.95 }).get(1)!
     expect(placementAt(motion, 60)).toEqual({ on: 'track', progress: 2 })
     expect(placementAt(motion, 79.999).on).toBe('track')
@@ -129,7 +105,7 @@ describe('motion', () => {
 
   it('drops a line crossing made on pit road', () => {
     // Line mid pit road: crossing at 110 falls inside the 100-120 stop.
-    const m = model([null, 30, 30, 50, 30, 30], [stop(9, 100, 120)])
+    const m = model([null, 30, 30, 50, 30, 30], [pitStop(9, 100, 120)])
     const motion = buildMotion(m, { entry: 0.9, exit: 0.1 }).get(1)!
     expect(placementAt(motion, 110).on).toBe('pit')
     const after = placementAt(motion, 120.001)
@@ -146,7 +122,7 @@ describe('motion', () => {
 
   it('enters pit road after the line when pit-in comes just before the crossing', () => {
     // Pit entry just past the line, but pit-in at 89.8 is a moment before the lap 3 crossing at 90.
-    const m = model([null, 30, 30, 30, 46, 30], [stop(9, 89.8, 110)])
+    const m = model([null, 30, 30, 30, 46, 30], [pitStop(9, 89.8, 110)])
     const motion = buildMotion(m, { entry: 0.02, exit: 0.12 }).get(1)!
     const atIn = placementAt(motion, 89.79)
     expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(3.02, 1)
@@ -157,7 +133,7 @@ describe('motion', () => {
 
   it('enters pit road before the line when pit-in comes just after the crossing', () => {
     // Pit entry just before the line, but pit-in at 90.4 is a moment after the lap 3 crossing at 90.
-    const m = model([null, 30, 30, 30, 48, 30], [stop(9, 90.4, 110)])
+    const m = model([null, 30, 30, 30, 48, 30], [pitStop(9, 90.4, 110)])
     const motion = buildMotion(m, { entry: 0.98, exit: 0.08 }).get(1)!
     const atIn = placementAt(motion, 90.39)
     expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(2.98, 1)
@@ -168,7 +144,7 @@ describe('motion', () => {
 
   it('finds pit entry late in a long in-lap on a short track', () => {
     // 15 s laps, entry at 0.9: the car reaches it 13.5 s into lap 3, which then takes 45 s.
-    const m = model([null, 15, 15, 45, 15], [stop(9, 43.5, 70)])
+    const m = model([null, 15, 15, 45, 15], [pitStop(9, 43.5, 70)])
     const motion = buildMotion(m, { entry: 0.9, exit: 0.1 }).get(1)!
     const atIn = placementAt(motion, 43.49)
     expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(2.9, 2)
