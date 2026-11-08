@@ -46,8 +46,6 @@ export function flagStyle(state: number): FlagStyle {
   }
 }
 
-export const MAKES = ['Chevrolet', 'Ford', 'Toyota'] as const
-
 export interface MakeStyle {
   /** Car color. */
   fill: string
@@ -61,6 +59,9 @@ const MAKE_STYLE: Record<string, MakeStyle> = {
   Toyota: { fill: '#ef233c', ink: '#ffffff' },
 }
 const OTHER_MAKE: MakeStyle = { fill: '#a1a1aa', ink: '#111111' }
+
+/** Manufacturers with their own color, in display order. */
+export const MAKES = Object.keys(MAKE_STYLE)
 
 export function makeStyle(make: string | null): MakeStyle {
   return (make != null && MAKE_STYLE[make]) || OTHER_MAKE
