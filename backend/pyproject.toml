@@ -1,0 +1,48 @@
+[project]
+name = "nascar-dashboard"
+version = "0.1.0"
+description = "Read-only web API for replaying NASCAR races from the cadence Aurora DSQL schema."
+requires-python = ">=3.14"
+license = { text = "MIT" }
+authors = [{ name = "Tanner Yohe" }]
+dependencies = [
+    "fastapi[standard]",
+    "sqlalchemy",
+    # Aurora DSQL access: wraps psycopg3 and mints/refreshes IAM auth tokens.
+    "aurora-dsql-python-connector[psycopg]",
+    # CA bundle for sslmode=verify-full (see db.py).
+    "certifi",
+    "pydantic-settings",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff",
+    "ty",
+]
+# Only for scripts/seed_dev_db.py, which loads races from the public NASCAR feed
+# into a local SQLite file so the app can run without DSQL.
+seed = ["nascar-api"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nascar_dashboard"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection idiom.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,340 @@
+# Tracks to build layouts for, keyed by the feed's track_id.
+#
+#   lat, lon   a point inside the venue; ways are searched within `radius` m.
+#   variants   lap lengths (miles) raced here. One layout is built per length,
+#              by picking the loop of OSM raceway ways closest to it. The replay
+#              uses the variant closest to a race's distance / laps.
+#   road       true for road and street courses. Anything else is an oval, and
+#              the builder prefers the roundest loop of the right length.
+#   direction  "ccw" (left turns: every oval) or "cw". Only used when the OSM
+#              ways don't say (no oneway tags).
+#   sf         optional [lat, lon] of the start/finish line. Without it, the
+#              line goes beside the middle of pit road.
+#
+# Temporary street circuits, dirt tracks and the Coliseum aren't drawn in OSM
+# as raceways; they're listed so the build reports them, and fall back to the
+# generic oval in the app.
+
+[4]
+name = "Darlington Raceway"
+lat = 34.2951
+lon = -79.9056
+variants = [1.366]
+
+[14]
+name = "Bristol Motor Speedway"
+lat = 36.5157
+lon = -82.2570
+variants = [0.533]
+
+[22]
+name = "Martinsville Speedway"
+lat = 36.6340
+lon = -79.8517
+variants = [0.526]
+
+[26]
+name = "Richmond Raceway"
+lat = 37.5925
+lon = -77.4196
+variants = [0.75]
+
+[34]
+road = true
+name = "Road America"
+lat = 43.7975
+lon = -87.9895
+radius = 3000
+direction = "cw"
+variants = [4.048]
+
+[38]
+name = "Auto Club Speedway"
+lat = 34.0889
+lon = -117.5005
+variants = [2.0]
+
+[39]
+name = "Chicagoland Speedway"
+lat = 41.4746
+lon = -88.0574
+variants = [1.5]
+
+[40]
+name = "Homestead-Miami Speedway"
+lat = 25.4517
+lon = -80.4089
+variants = [1.5]
+
+[41]
+name = "Kansas Speedway"
+lat = 39.1156
+lon = -94.8310
+variants = [1.5]
+
+[42]
+name = "Las Vegas Motor Speedway"
+lat = 36.2722
+lon = -115.0103
+variants = [1.5]
+
+[43]
+name = "Texas Motor Speedway"
+lat = 33.0372
+lon = -97.2811
+variants = [1.5]
+
+[45]
+name = "World Wide Technology Raceway"
+lat = 38.6510
+lon = -90.1357
+variants = [1.25, 2.0]
+
+[47]
+name = "Lucas Oil Indianapolis Raceway Park"
+lat = 39.8133
+lon = -86.3426
+variants = [0.686]
+
+[51]
+name = "The Milwaukee Mile"
+lat = 43.0198
+lon = -88.0110
+variants = [1.015]
+
+[52]
+name = "Nashville Superspeedway"
+lat = 36.0453
+lon = -86.4130
+variants = [1.333]
+
+[61]
+name = "Kentucky Speedway"
+lat = 38.7114
+lon = -84.9166
+variants = [1.5]
+
+[72]
+road = true
+name = "Mid-Ohio Sports Car Course"
+lat = 40.6895
+lon = -82.6357
+direction = "cw"
+variants = [2.258]
+
+[75]
+road = true
+name = "Autódromo Hermanos Rodríguez"
+lat = 19.4042
+lon = -99.0907
+radius = 2500
+direction = "cw"
+variants = [2.42]
+
+[82]
+name = "Talladega Superspeedway"
+lat = 33.5670
+lon = -86.0644
+radius = 2500
+variants = [2.66]
+
+[84]
+name = "Phoenix Raceway"
+lat = 33.3753
+lon = -112.3109
+variants = [1.0]
+
+[99]
+road = true
+name = "Sonoma Raceway"
+lat = 38.1611
+lon = -122.4549
+direction = "cw"
+variants = [1.99, 2.52]
+
+[103]
+name = "Dover Motor Speedway"
+lat = 39.1898
+lon = -75.5301
+variants = [1.0]
+
+[105]
+name = "Daytona International Speedway"
+lat = 29.1852
+lon = -81.0705
+variants = [2.5]
+
+[111]
+name = "Atlanta Motor Speedway"
+lat = 33.3838
+lon = -84.3170
+variants = [1.54]
+
+[123]
+name = "Indianapolis Motor Speedway"
+lat = 39.7950
+lon = -86.2347
+radius = 2500
+variants = [2.5]
+
+[133]
+name = "Michigan International Speedway"
+lat = 42.0664
+lon = -84.2411
+variants = [2.0]
+
+[138]
+name = "New Hampshire Motor Speedway"
+lat = 43.3626
+lon = -71.4605
+variants = [1.058]
+
+[157]
+road = true
+name = "Watkins Glen International"
+lat = 42.3369
+lon = -76.9272
+radius = 2500
+direction = "cw"
+variants = [2.45]
+
+[159]
+name = "Bowman Gray Stadium"
+lat = 36.0832
+lon = -80.2312
+variants = [0.25]
+
+[162]
+name = "Charlotte Motor Speedway"
+lat = 35.3523
+lon = -80.6830
+variants = [1.5]
+
+[175]
+name = "Rockingham Speedway"
+lat = 34.9744
+lon = -79.6114
+variants = [0.94]
+
+[177]
+name = "North Wilkesboro Speedway"
+lat = 36.1416
+lon = -81.0759
+variants = [0.625]
+
+[198]
+name = "Pocono Raceway"
+lat = 41.0555
+lon = -75.5114
+radius = 2500
+variants = [2.5]
+
+[204]
+road = true
+name = "Portland International Raceway"
+lat = 45.5946
+lon = -122.6931
+direction = "cw"
+variants = [1.97]
+
+[206]
+name = "Iowa Speedway"
+lat = 41.6773
+lon = -93.0129
+variants = [0.875]
+
+[208]
+name = "Eldora Speedway"
+lat = 40.3328
+lon = -84.6297
+variants = [0.5]
+
+[209]
+road = true
+name = "Canadian Tire Motorsport Park"
+lat = 44.0485
+lon = -78.6760
+radius = 2500
+direction = "cw"
+variants = [2.459]
+
+[210]
+road = true
+name = "Charlotte Motor Speedway Road Course"
+lat = 35.3523
+lon = -80.6830
+variants = [2.32]
+
+[211]
+road = true
+name = "Indianapolis Motor Speedway Road Course"
+lat = 39.7950
+lon = -86.2347
+radius = 2500
+direction = "cw"
+variants = [2.439]
+
+[212]
+road = true
+name = "Daytona International Speedway Road Course"
+lat = 29.1852
+lon = -81.0705
+variants = [3.61]
+
+[214]
+road = true
+name = "Circuit of The Americas"
+lat = 30.1328
+lon = -97.6411
+radius = 2500
+direction = "ccw"
+variants = [2.4, 3.41]
+
+[215]
+name = "Knoxville Raceway"
+lat = 41.3171
+lon = -93.1095
+variants = [0.5]
+
+[216]
+name = "Bristol Motor Speedway Dirt"
+lat = 36.5157
+lon = -82.2570
+variants = [0.533]
+
+[217]
+name = "Los Angeles Memorial Coliseum"
+lat = 34.0141
+lon = -118.2879
+variants = [0.25]
+
+[218]
+road = true
+name = "Chicago Street Race"
+lat = 41.8710
+lon = -87.6200
+direction = "cw"
+variants = [2.2]
+
+[220]
+road = true
+name = "Lime Rock Park"
+lat = 41.9286
+lon = -73.3814
+direction = "cw"
+variants = [1.478]
+
+[221]
+road = true
+name = "San Diego Street Course"
+lat = 32.6990
+lon = -117.2100
+variants = [3.4]
+
+[222]
+road = true
+name = "Grand Prix of St. Petersburg"
+lat = 27.7660
+lon = -82.6290
+direction = "cw"
+variants = [1.8]
