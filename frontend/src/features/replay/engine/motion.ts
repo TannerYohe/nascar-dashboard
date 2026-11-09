@@ -140,8 +140,8 @@ function carMotion(model: RaceModel, car: CarModel, layout: PitLayout): CarMotio
  * of this car's crossing: just after it when pit entry is late in the lap,
  * just before it when entry is early. Late entry: pick the lap count that puts
  * pit entry nearest where the car would be at its normal pace, never more than
- * the crossings so far. Early entry: count one more only when the next
- * crossing comes sooner after pit-in than the drive from the line to entry.
+ * the crossings so far. Early entry: count one more only when the car's next
+ * crossing falls during the stop, since the line isn't on pit road.
  * Either way a slow in-lap (a car limping in) stays on the lap it started.
  */
 function lapsBeforePitEntry(model: RaceModel, car: CarModel, w: PitWindow, layout: PitLayout): number {
@@ -151,8 +151,8 @@ function lapsBeforePitEntry(model: RaceModel, car: CarModel, w: PitWindow, layou
     const progress = n + (w.start - car.cross[n]) / pace
     return Math.max(0, Math.min(n, Math.round(progress - layout.entry)))
   }
-  const crossesJustAfter = car.cross[n + 1] - w.start < layout.entry * pace
-  return crossesJustAfter ? n + 1 : n
+  const next = car.cross[n + 1]
+  return next != null && next < w.end ? n + 1 : n
 }
 
 function order(kind: AnchorKind): number {
