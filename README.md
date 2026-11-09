@@ -100,7 +100,9 @@ Map data © OpenStreetMap contributors, available under the [ODbL](https://www.o
 
 ## Deployment
 
-The plan is AWS serverless, like cadence: the API on Lambda behind a Function URL or API Gateway, and the built UI on S3 + CloudFront. The API holds no state beyond an in-process cache of complete race bundles, so it runs unchanged on Lambda. It's not set up yet.
+The app runs on AWS. CloudFront serves the built UI from S3 and sends `/api/*` to the API, a container image on Lambda behind a function URL. Every merge to `master` runs CI, tags the next version (`v1`, `v2`, ...), pushes the image, deploys, and publishes a GitHub Release. Pull requests run the same CI.
+
+See [docs/deployment.md](docs/deployment.md) for the architecture, costs, rollbacks and one-time setup.
 
 ## License
 
