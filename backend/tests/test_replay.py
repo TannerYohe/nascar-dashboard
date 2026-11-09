@@ -1,6 +1,6 @@
 import datetime
 
-from fastapi.testclient import TestClient
+from litestar.testing import TestClient
 from sqlalchemy import delete, update
 from sqlalchemy.orm import Session, sessionmaker
 

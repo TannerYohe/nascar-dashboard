@@ -6,13 +6,13 @@ requires-python = ">=3.14"
 license = { text = "MIT" }
 authors = [{ name = "Tanner Yohe" }]
 dependencies = [
-    "fastapi[standard]",
     "sqlalchemy",
     # Aurora DSQL access: wraps psycopg3 and mints/refreshes IAM auth tokens.
     "aurora-dsql-python-connector[psycopg]",
     # CA bundle for sslmode=verify-full (see db.py).
     "certifi",
     "pydantic-settings",
+    "litestar[standard]>=2.25.0",
 ]
 
 [dependency-groups]
@@ -39,10 +39,6 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-
-[tool.ruff.lint.flake8-bugbear]
-# FastAPI's dependency-injection idiom.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

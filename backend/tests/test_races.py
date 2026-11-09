@@ -1,7 +1,7 @@
 import datetime
 
 import pytest
-from fastapi.testclient import TestClient
+from litestar.testing import TestClient
 
 from conftest import RACE_ID
 from nascar_dashboard.models import Race
@@ -47,7 +47,7 @@ def test_unknown_race_is_404(client: TestClient) -> None:
 
 
 def test_series_must_be_valid(client: TestClient) -> None:
-    assert client.get("/api/races", params={"series": 7}).status_code == 422
+    assert client.get("/api/races", params={"series": 7}).status_code == 400
 
 
 @pytest.mark.parametrize("aware", [True, False], ids=["aware", "naive"])

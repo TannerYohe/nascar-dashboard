@@ -1,31 +1,40 @@
-"""FastAPI application."""
+"""Litestar application."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
+from collections.abc import Callable, Iterator
+
+from litestar import Litestar, Router, get
+from litestar.config.compression import CompressionConfig
+from litestar.config.cors import CORSConfig
+from litestar.di import Provide
+from litestar.openapi import OpenAPIConfig
+from sqlalchemy.orm import Session
 
 from .config import get_settings
+from .db import get_session
 from .routes import races, replay
 
-app = FastAPI(title="NASCAR Dashboard API", version="0.1.0")
-app.add_middleware(GZipMiddleware, minimum_size=1024)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=get_settings().cors_origins,
-    allow_methods=["GET"],
-    allow_headers=["*"],
-)
 
-api = APIRouter(prefix="/api")
-
-
-@api.get("/health")
+@get("/health", sync_to_thread=False)
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-api.include_router(races.router)
-api.include_router(replay.router)
-app.include_router(api)
+def create_app(session_provider: Callable[[], Iterator[Session]] = get_session) -> Litestar:
+    """Build the app, opening each request's database session with `session_provider`."""
+    api = Router("/api", route_handlers=[health, races.router, replay.router])
+    return Litestar(
+        route_handlers=[api],
+        dependencies={"session": Provide(session_provider)},
+        compression_config=CompressionConfig(backend="gzip", minimum_size=1024),
+        cors_config=CORSConfig(
+            allow_origins=get_settings().cors_origins,
+            allow_methods=["GET"],
+            allow_headers=["*"],
+        ),
+        openapi_config=OpenAPIConfig(title="NASCAR Dashboard API", version="0.1.0"),
+    )
+
+
+app = create_app()
