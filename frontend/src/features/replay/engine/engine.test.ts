@@ -286,9 +286,12 @@ describe('events', () => {
   })
 
   it('matches the serving stop by note lap, not the car lap', () => {
-    // Car 2 a lap down: its own lap 1 when the leader has done 2, so leader lap 3.
+    // Car 4 is a lap down at 70 s: one lap of its own done while the leader has done two.
     const lapped = buildModel(
-      bundle({ pit_stops: [pitStop(2, 70, 80, { lap: 1, leader_lap: 2, note_lap: 3 })], penalties: [speeding] }),
+      bundle({
+        pit_stops: [pitStop(4, 70, 80, { lap: 1, leader_lap: 2, note_lap: 3 })],
+        penalties: [{ ...speeding, car_number: 4, driver_id: 4 }],
+      }),
     )
     expect(lapped.penalties[0].served).toBe(70)
   })
