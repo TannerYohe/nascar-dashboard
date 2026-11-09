@@ -212,7 +212,7 @@ function Pits({ model, t, visibleCars }: { model: RaceModel; t: number; visibleC
                     {cleanName(car.name)}
                     {active && <span className="ml-2 text-[10px] font-bold text-sky-300">ON PIT ROAD</span>}
                   </span>
-                  <span className="tabular shrink-0 font-mono text-[10px] text-faint">L{s.lap ?? '–'}</span>
+                  <span className="tabular shrink-0 font-mono text-[10px] text-faint">L{s.note_lap ?? '–'}</span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                   <span className="inline-flex items-center gap-1">
