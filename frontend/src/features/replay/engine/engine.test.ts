@@ -296,11 +296,20 @@ describe('events', () => {
   it('reports where a penalty stands over time', () => {
     const [timing] = model.penalties
     expect(penaltyStatusAt(timing, 10)).toBeNull()
+    expect(penaltyStatusAt(timing, 15)).toBe('pending')
     expect(penaltyStatusAt(timing, 30)).toBe('pending')
+    expect(penaltyStatusAt(timing, 70)).toBe('served')
     expect(penaltyStatusAt(timing, 80)).toBe('served')
     const unrecordedPenalty = { ...speeding, served_lap: null, served_how: null }
     const [unrecorded] = buildModel(bundle({ penalties: [unrecordedPenalty] })).penalties
     expect(penaltyStatusAt(unrecorded, 30)).toBe('unrecorded')
+  })
+
+  it('shows a pre-race penalty as pending before the green', () => {
+    const [preRace] = buildModel(bundle({ penalties: [{ ...speeding, lap: 0 }] })).penalties
+    expect(preRace.given).toBe(-1)
+    expect(penaltyStatusAt(preRace, -1)).toBe('pending')
+    expect(penaltyStatusAt(preRace, 0)).toBe('pending')
   })
 
   it('sorts the pre-race note first', () => {
