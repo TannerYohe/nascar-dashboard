@@ -106,7 +106,7 @@ jobs:
       - name: Smoke test
         run: |
           docker run --detach --name api --publish 8080:8080 nascar-dashboard-api:ci
-          if ! curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 \
+          if ! curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 1 \
             http://localhost:8080/api/health; then
             docker logs api
             exit 1
