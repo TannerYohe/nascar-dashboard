@@ -25,7 +25,7 @@ Penalties come from the official infraction records when present. They're also r
 ## Layout
 
 ```
-backend/          FastAPI API (Python 3.14, uv)
+backend/          Litestar API (Python 3.14, uv)
   src/nascar_dashboard/
     models.py       read-only models of the cadence tables
     services/       race listings, replay bundle, flag timeline, penalty parsing
@@ -60,7 +60,7 @@ Your IAM principal also needs `dsql:DbConnect` on the cluster. Then:
 cd backend
 uv sync
 export DSQL_ENDPOINT=<cluster-id>.dsql.<region>.on.aws AWS_REGION=<region>   # or put them in backend/.env
-uv run fastapi dev src/nascar_dashboard/main.py
+uv run litestar --app nascar_dashboard.main:app run --reload
 ```
 
 ### Without DSQL
@@ -70,7 +70,7 @@ Seed a local SQLite file from the public NASCAR feed and point the API at it:
 ```sh
 cd backend
 uv run --group seed python scripts/seed_dev_db.py --db dev.db --year 2025 --series 1 --latest 5
-DATABASE_URL=sqlite:///dev.db uv run fastapi dev src/nascar_dashboard/main.py
+DATABASE_URL=sqlite:///dev.db uv run litestar --app nascar_dashboard.main:app run --reload
 ```
 
 ### The UI
