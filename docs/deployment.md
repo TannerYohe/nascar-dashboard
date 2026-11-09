@@ -66,8 +66,12 @@ IAM roles, so a release can't widen its own permissions. A change to
 1. Runs CI (`ci.yml`): backend lint, format, type check and tests; frontend lint,
    type check, tests and build; template and script lint; an image build with a
    health-check smoke test.
-2. Tags the commit with the next version (`v1`, `v2`, ...). The tag is pushed
-   first, so a release that fails partway uses up its number rather than reusing it.
+2. Tags the commit with the next calendar version, `vYEAR.MONTH.N`: the first
+   release in November 2026 is `v2026.11.0`, the next `v2026.11.1`, and N starts
+   again at 0 each month. Releases ship on every merge, with no one to decide
+   whether a change is major or minor, so the version records when it shipped
+   instead. The tag is pushed first, so a release that fails partway uses up its
+   number rather than reusing it.
 3. Builds the arm64 image natively on an arm64 runner and pushes it to ECR,
    tagged with the version.
 4. Builds the UI and runs `infra/deploy.sh` with the image digest: it updates the

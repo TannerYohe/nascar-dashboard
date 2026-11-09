@@ -34,12 +34,15 @@ jobs:
         with:
           fetch-depth: 0 # the tag list is how the next version is worked out
 
-      # Versions are v1, v2, ... The tag is pushed before anything is built, so a
-      # release that fails partway uses up its number rather than reusing it.
+      # Versions are vYEAR.MONTH.N, with N counting from 0 each month. The tag is
+      # pushed before anything is built, so a release that fails partway uses up
+      # its number rather than reusing it.
       - name: Reserve the next version
         run: |
-          LAST=$(git tag --list 'v*' | sed 's/^v//' | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
-          VERSION="v$(( ${LAST:-0} + 1 ))"
+          YEAR_MONTH="$(date -u +%Y).$(date -u +%-m)"
+          LAST=$(git tag --list "v${YEAR_MONTH}.*" | cut -d. -f3 | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
+          if [ -n "$LAST" ]; then N=$(( LAST + 1 )); else N=0; fi
+          VERSION="v${YEAR_MONTH}.${N}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

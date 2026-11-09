@@ -100,7 +100,7 @@ Map data © OpenStreetMap contributors, available under the [ODbL](https://www.o
 
 ## Deployment
 
-The app runs on AWS. CloudFront serves the built UI from S3 and sends `/api/*` to the API, a container image on Lambda behind a function URL. Every merge to `master` runs CI, tags the next version (`v1`, `v2`, ...), pushes the image, deploys, and publishes a GitHub Release. Pull requests run the same CI.
+The app runs on AWS. CloudFront serves the built UI from S3 and sends `/api/*` to the API, a container image on Lambda behind a function URL. Every merge to `master` runs CI, tags the next calendar version (`v2026.11.0`, `v2026.11.1`, ...), pushes the image, deploys, and publishes a GitHub Release. Pull requests run the same CI.
 
 See [docs/deployment.md](docs/deployment.md) for the architecture, costs, rollbacks and one-time setup.
 
