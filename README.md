@@ -104,4 +104,4 @@ The plan is AWS serverless, like cadence: the API on Lambda behind a Function UR
 
 ## License
 
-[MIT](LICENSE)
+[PolyForm Noncommercial 1.0.0](LICENSE): free to use, change and share for any noncommercial purpose. Commercial use needs a separate license.
