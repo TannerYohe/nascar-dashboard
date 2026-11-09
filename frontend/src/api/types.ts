@@ -92,8 +92,10 @@ export interface PitStop {
   driver_name: string | null
   /** Laps the car had completed at pit-in. */
   lap: number | null
-  /** Laps the leader had completed at pit-in (one less than the lap notes' lap number). */
+  /** Laps the leader had completed at pit-in. */
   leader_lap: number | null
+  /** The lap the leader was running at pit-in, numbered like lap notes and penalties. */
+  note_lap: number | null
   in_time: number
   out_time: number | null
   box_in_time: number | null

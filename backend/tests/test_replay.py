@@ -79,7 +79,7 @@ def test_lapped_car_serves_a_penalty_at_its_next_stop(
     speeding = next(p for p in body["penalties"] if p["car_number"] == 22)
     assert (speeding["lap"], speeding["served_lap"], speeding["served_how"]) == (2, 3, "pit_stop")
     stop = next(s for s in body["pit_stops"] if s["car_number"] == 22)
-    assert (stop["lap"], stop["leader_lap"]) == (1, 2)
+    assert (stop["lap"], stop["leader_lap"], stop["note_lap"]) == (1, 2, 3)
 
 
 def test_notes_carry_driver_ids_and_kind(client: TestClient) -> None:

@@ -174,6 +174,7 @@ def _pit_stops(session: Session, race_id: int) -> list[PitStop]:
                 driver_name=p.driver_name,
                 lap=p.lap_count,
                 leader_lap=p.leader_lap,
+                note_lap=_note_lap(p.leader_lap),
                 in_time=p.pit_in_race_time,
                 out_time=p.pit_out_race_time,
                 # The feed uses -1 for "not measured".
@@ -196,9 +197,9 @@ def _pit_stops(session: Session, race_id: int) -> list[PitStop]:
     return stops
 
 
-def _stop_leader_lap(stop: PitStop) -> int | None:
-    """The leader lap a stop was made on, numbered like lap notes (leader laps done, plus one)."""
-    return None if stop.leader_lap is None else stop.leader_lap + 1
+def _note_lap(leader_laps_done: int | None) -> int | None:
+    """The lap the leader is running, as lap notes number it."""
+    return None if leader_laps_done is None else leader_laps_done + 1
 
 
 def _measured(value: float | None) -> float | None:
@@ -256,7 +257,7 @@ def build_replay(session: Session, race_id: int) -> ReplayBundle | None:
         official,
         [NoteText(n.lap, n.note_id, n.note) for n in notes if n.kind != "trivia"],
         [
-            PitVisit(p.car_number, _stop_leader_lap(p), p.infraction, len(p.tires))
+            PitVisit(p.car_number, p.note_lap, p.infraction, len(p.tires))
             for p in pit_stops
             if p.in_time > 0
         ],
