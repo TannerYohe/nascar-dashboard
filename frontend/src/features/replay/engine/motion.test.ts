@@ -131,6 +131,14 @@ describe('motion', () => {
     expect(placementAt(motion, 136)).toEqual({ on: 'track', progress: 4 })
   })
 
+  it('enters pit road after the line when pit-in comes a second before the crossing', () => {
+    const m = model([null, 30, 30, 30, 46, 30], [pitStop(9, 89, 110)])
+    const motion = buildMotion(m, { entry: 0.02, exit: 0.12 }).get(1)!
+    const atIn = placementAt(motion, 88.99)
+    expect(atIn.on === 'track' && atIn.progress).toBeCloseTo(3.02, 1)
+    expect(placementAt(motion, 136)).toEqual({ on: 'track', progress: 4 })
+  })
+
   it('enters pit road before the line when pit-in comes just after the crossing', () => {
     // Pit entry just before the line, but pit-in at 90.4 is a moment after the lap 3 crossing at 90.
     const m = model([null, 30, 30, 30, 48, 30], [pitStop(9, 90.4, 110)])

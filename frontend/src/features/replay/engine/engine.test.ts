@@ -150,7 +150,7 @@ describe('positions over time', () => {
   })
 
   it('shows the pit window', () => {
-    const m = buildModel(bundle({ pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2 })] }))
+    const m = buildModel(bundle({ pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2, note_lap: 3 })] }))
     const f = frameAt(m.byCar.get(2)!, 75, m.finishTime)
     expect(f.status).toBe('pit')
     expect(f.pitState?.f).toBeCloseTo(0.5)
@@ -227,7 +227,7 @@ describe('events', () => {
         { start_lap: 1, end_lap: 2, car_number: 1 },
         { start_lap: 3, end_lap: 4, car_number: 2 },
       ],
-      pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2 })],
+      pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2, note_lap: 3 })],
       penalties: [speeding],
       notes: [
         { lap: 2, note_id: 1, flag_state: 2, kind: 'race', note: 'Caution for debris.', driver_ids: [] },
@@ -278,17 +278,20 @@ describe('events', () => {
   ] as const)('times a penalty served $why', ({ how, lap, served }) => {
     const m = buildModel(
       bundle({
-        pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2 })],
+        pit_stops: [pitStop(2, 70, 80, { lap: 2, leader_lap: 2, note_lap: 3 })],
         penalties: [{ ...speeding, served_how: how, served_lap: lap }],
       }),
     )
     expect(m.penalties[0].served).toBe(served)
   })
 
-  it('matches the serving stop by leader lap, not the car lap', () => {
-    // Car 2 a lap down: its own lap 1 when the leader has done 2, so leader lap 3.
+  it('matches the serving stop by note lap, not the car lap', () => {
+    // Car 4 is a lap down at 70 s: one lap of its own done while the leader has done two.
     const lapped = buildModel(
-      bundle({ pit_stops: [pitStop(2, 70, 80, { lap: 1, leader_lap: 2 })], penalties: [speeding] }),
+      bundle({
+        pit_stops: [pitStop(4, 70, 80, { lap: 1, leader_lap: 2, note_lap: 3 })],
+        penalties: [{ ...speeding, car_number: 4, driver_id: 4 }],
+      }),
     )
     expect(lapped.penalties[0].served).toBe(70)
   })

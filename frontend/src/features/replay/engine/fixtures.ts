@@ -9,6 +9,7 @@ export function pitStop(car: number, inTime: number, outTime: number, overrides:
     driver_name: null,
     lap: null,
     leader_lap: null,
+    note_lap: null,
     in_time: inTime,
     out_time: outTime,
     box_in_time: null,

@@ -79,7 +79,28 @@ def test_lapped_car_serves_a_penalty_at_its_next_stop(
     speeding = next(p for p in body["penalties"] if p["car_number"] == 22)
     assert (speeding["lap"], speeding["served_lap"], speeding["served_how"]) == (2, 3, "pit_stop")
     stop = next(s for s in body["pit_stops"] if s["car_number"] == 22)
-    assert (stop["lap"], stop["leader_lap"]) == (1, 2)
+    assert (stop["lap"], stop["leader_lap"], stop["note_lap"]) == (1, 2, 3)
+
+
+def test_pit_report_penalty_is_on_the_leader_lap(
+    db: sessionmaker[Session], client: TestClient
+) -> None:
+    # Car 33 pits with one lap of its own done, after the leader has finished lap 2.
+    with db() as session:
+        session.add(
+            RacePitStop(
+                race_id=RACE_ID,
+                vehicle_number=33,
+                pit_in_race_time=60.5,
+                pit_out_race_time=80.0,
+                lap_count=1,
+                leader_lap=2,
+                infraction="Pit road speeding",
+            )
+        )
+        session.commit()
+    [speeding] = [p for p in _bundle(client)["penalties"] if p["source"] == "pit_stop"]
+    assert (speeding["car_number"], speeding["lap"]) == (33, 3)
 
 
 def test_notes_carry_driver_ids_and_kind(client: TestClient) -> None:

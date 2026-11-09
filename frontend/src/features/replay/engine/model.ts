@@ -373,16 +373,11 @@ export function penaltyStatusAt(timing: PenaltyTiming, t: number): PenaltyStatus
   return t < timing.served ? 'pending' : 'served'
 }
 
-/** The leader lap a stop was made on, numbered like lap notes: laps the leader completed, plus one. */
-export function stopLeaderLap(stop: PitStop): number | null {
-  return stop.leader_lap == null ? null : stop.leader_lap + 1
-}
-
 /** The start of the pit stop that served it, the restart, or else midway through the lap. */
 function servedTime(model: RaceModel, p: Penalty): number | null {
   if (p.served_lap == null) return null
   if (p.served_how === 'pit_stop') {
-    const stop = model.byCar.get(p.car_number)?.pits.find((w) => stopLeaderLap(w.stop) === p.served_lap)
+    const stop = model.byCar.get(p.car_number)?.pits.find((w) => w.stop.note_lap === p.served_lap)
     if (stop) return stop.start
   }
   return p.served_how === 'restart' ? lapStartTime(model, p.served_lap) : lapMidTime(model, p.served_lap)
