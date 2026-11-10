@@ -27,6 +27,16 @@ def test_unhandled_error_is_a_logged_500(caplog: pytest.LogCaptureFixture) -> No
     assert "RuntimeError: database unreachable" in caplog.text
 
 
+def test_allowed_origin_gets_cors_headers(client: TestClient) -> None:
+    response = client.get("/api/seasons", headers={"Origin": "http://localhost:5173"})
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_other_origin_gets_no_cors_headers(client: TestClient) -> None:
+    response = client.get("/api/seasons", headers={"Origin": "https://example.com"})
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_compressed_cross_origin_response_varies_on_both(client: TestClient) -> None:
     response = client.get(
         f"/api/races/{RACE_ID}/replay",

@@ -5,6 +5,7 @@ from litestar.testing import TestClient
 
 from conftest import RACE_ID
 from nascar_dashboard.models import Race
+from nascar_dashboard.routes.races import LISTING_CACHE
 from nascar_dashboard.services.races import _status
 
 NOW = datetime.datetime(2025, 6, 1, 18, tzinfo=datetime.UTC)
@@ -41,9 +42,16 @@ def test_race_detail(client: TestClient) -> None:
     assert body["track_name"] == "Test Speedway"
 
 
-def test_unknown_race_is_404(client: TestClient) -> None:
-    assert client.get("/api/races/12345").status_code == 404
-    assert client.get("/api/races/12345/replay").status_code == 404
+@pytest.mark.parametrize("path", ["/api/seasons", "/api/races", f"/api/races/{RACE_ID}"])
+def test_listings_are_briefly_cacheable(client: TestClient, path: str) -> None:
+    assert client.get(path).headers["cache-control"] == LISTING_CACHE.to_header()
+
+
+@pytest.mark.parametrize("path", ["/api/races/12345", "/api/races/12345/replay"])
+def test_unknown_race_is_an_uncached_404(client: TestClient, path: str) -> None:
+    response = client.get(path)
+    assert response.status_code == 404
+    assert "cache-control" not in response.headers
 
 
 def test_series_must_be_valid(client: TestClient) -> None:
