@@ -88,6 +88,11 @@ only this repository's `production` environment. It can push images, upload the
 UI, invalidate the cache, and deploy the app stack, and only by passing the
 `nascar-dashboard-cloudformation` role to CloudFormation.
 
+If the very first deploy fails, CloudFormation rolls the stack back to
+`ROLLBACK_COMPLETE`, a state it can't update. `infra/deploy.sh` checks for that
+and deletes the empty stack before deploying, so the next release creates it
+again. That's why the deploy role may also delete the app stack.
+
 ### Rolling back
 
 Revert the bad commit on `master`; the release that follows redeploys the

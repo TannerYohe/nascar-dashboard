@@ -17,12 +17,20 @@ if [ ! -f "$DIST_DIR/index.html" ]; then
 fi
 
 BUCKET=$(stack_output "$BOOTSTRAP_STACK" SiteBucketName)
+CLOUDFORMATION_ROLE=$(stack_output "$BOOTSTRAP_STACK" CloudFormationRoleArn)
+
+# A failed first create leaves the stack in ROLLBACK_COMPLETE, which can only be deleted.
+if [ "$(stack_status "$APP_STACK")" = ROLLBACK_COMPLETE ]; then
+  echo "Deleting stack $APP_STACK, left in ROLLBACK_COMPLETE by a failed first deploy"
+  aws cloudformation delete-stack --stack-name "$APP_STACK" --role-arn "$CLOUDFORMATION_ROLE"
+  aws cloudformation wait stack-delete-complete --stack-name "$APP_STACK"
+fi
 
 echo "Deploying stack $APP_STACK with $IMAGE_URI"
 aws cloudformation deploy \
   --stack-name "$APP_STACK" \
   --template-file infra/app.yaml \
-  --role-arn "$(stack_output "$BOOTSTRAP_STACK" CloudFormationRoleArn)" \
+  --role-arn "$CLOUDFORMATION_ROLE" \
   --no-fail-on-empty-changeset \
   --parameter-overrides \
     ImageUri="$IMAGE_URI" \

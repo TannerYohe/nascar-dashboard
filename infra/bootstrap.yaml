@@ -197,6 +197,10 @@ Resources:
                 Resource:
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:changeSet/*
+              - Sid: DeleteFailedAppStack
+                Effect: Allow
+                Action: cloudformation:DeleteStack
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*
               - Sid: ValidateTemplates
                 Effect: Allow
                 Action:
