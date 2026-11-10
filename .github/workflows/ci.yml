@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call: # release.yml runs these checks before releasing
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ruff lint
+        run: uv run ruff check --output-format=github
+
+      - name: Ruff format
+        run: uv run ruff format --check --diff
+
+      - name: Type check
+        run: uv run ty check src tests
+
+      - name: Tests
+        run: uv run pytest -v
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint -- --format=github
+
+      - name: Type check
+        run: npx tsc -b
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npx vite build
+
+  infra:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Lint CloudFormation templates
+        run: uvx cfn-lint@1.58.0 --format parseable infra/*.yaml
+
+      - name: Lint deploy scripts
+        run: shellcheck --external-sources infra/*.sh
+
+  image:
+    name: API image
+    # Same architecture as the Lambda function.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          load: true
+          tags: nascar-dashboard-api:ci
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Smoke test
+        run: |
+          docker run --detach --name api --publish 8080:8080 nascar-dashboard-api:ci
+          if ! curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 1 \
+            http://localhost:8080/api/health; then
+            docker logs api
+            exit 1
+          fi

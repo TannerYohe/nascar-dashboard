@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+# Never run two releases at once. A newer merge replaces a release still waiting to start.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    # Same architecture as the Lambda function, so the image builds natively.
+    runs-on: ubuntu-24.04-arm
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.site_url }}
+    permissions:
+      contents: write # push the version tag and create the release
+      id-token: write # GitHub -> AWS OIDC
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # the tag list is how the next version is worked out
+
+      # Versions are vYEAR.MONTH.N, with N counting from 0 each month. The tag is
+      # pushed before anything is built, so a release that fails partway uses up
+      # its number rather than reusing it.
+      - name: Reserve the next version
+        run: |
+          YEAR_MONTH="$(date -u +%Y).$(date -u +%-m)"
+          LAST=$(git tag --list "v${YEAR_MONTH}.*" | cut -d. -f3 | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
+          if [ -n "$LAST" ]; then N=$(( LAST + 1 )); else N=0; fi
+          VERSION="v${YEAR_MONTH}.${N}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+          echo "Releasing $VERSION (previous: ${LAST:-none})"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Look up the image repository
+        run: |
+          source infra/stacks.sh
+          REPOSITORY=$(stack_output "$BOOTSTRAP_STACK" ApiRepositoryUri)
+          echo "REPOSITORY=$REPOSITORY" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push the API image
+        id: image
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          push: true
+          tags: ${{ env.REPOSITORY }}:${{ env.VERSION }}
+          # Lambda only accepts a single-platform image manifest, not an index.
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build the UI
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy
+        id: deploy
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: infra/deploy.sh "${REPOSITORY}@${DIGEST}"
+
+      - name: Smoke test
+        env:
+          SITE_URL: ${{ steps.deploy.outputs.site_url }}
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 10 \
+            "$SITE_URL/api/health"
+          curl --fail --silent --show-error --output /dev/null "$SITE_URL/api/seasons"
+          curl --fail --silent --show-error --output /dev/null "$SITE_URL/"
+
+      - name: Publish GitHub Release
+        env:
+          SITE_URL: ${{ steps.deploy.outputs.site_url }}
+          IMAGE: ${{ env.REPOSITORY }}@${{ steps.image.outputs.digest }}
+        run: |
+          gh release create "$VERSION" --title "$VERSION" --generate-notes \
+            --notes "Deployed to $SITE_URL. API image \`$IMAGE\`."
+
+      - name: Write run summary
+        if: always()
+        env:
+          SITE_URL: ${{ steps.deploy.outputs.site_url }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          {
+            echo "### Race Rewind release"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Version | \`${VERSION:-not reserved}\` |"
+            echo "| Image | \`${DIGEST:-not pushed}\` |"
+            echo "| Site | ${SITE_URL:-not deployed} |"
+            echo "| Commit | ${GITHUB_SHA} |"
+          } >> "$GITHUB_STEP_SUMMARY"
