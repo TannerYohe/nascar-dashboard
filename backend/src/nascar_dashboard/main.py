@@ -8,6 +8,7 @@ from litestar import Litestar, Router, get
 from litestar.config.compression import CompressionConfig
 from litestar.config.cors import CORSConfig
 from litestar.di import Provide
+from litestar.logging.config import LoggingConfig
 from litestar.openapi import OpenAPIConfig
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,7 @@ def create_app(session_provider: Callable[[], Iterator[Session]] = get_session) 
             allow_headers=["*"],
         ),
         openapi_config=OpenAPIConfig(title="NASCAR Dashboard API", version="0.1.0"),
+        logging_config=LoggingConfig(log_exceptions="always"),
     )
 
 
