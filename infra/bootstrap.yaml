@@ -1,0 +1,264 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Race Rewind one-time setup: the API image repository, the API's IAM role, and the
+  roles GitHub Actions uses to deploy the app stack (app.yaml).
+
+Parameters:
+  AppStackName:
+    Type: String
+    Default: nascar-dashboard
+    Description: Name of the stack deployed from app.yaml.
+  DsqlClusterId:
+    Type: String
+    Description: Identifier of the Aurora DSQL cluster cadence loads.
+  GitHubRepository:
+    Type: String
+    Default: TannerYohe/nascar-dashboard
+    Description: owner/name of the repository allowed to deploy.
+  GitHubEnvironment:
+    Type: String
+    Default: production
+    Description: GitHub Actions environment the deploy job runs in.
+
+Resources:
+  ApiRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: nascar-dashboard-api
+      ImageTagMutability: IMMUTABLE
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep the 5 most recent images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 5
+                },
+                "action": { "type": "expire" }
+              }
+            ]
+          }
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: LambdaPull
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - ecr:BatchGetImage
+              - ecr:GetDownloadUrlForLayer
+            Condition:
+              StringLike:
+                aws:sourceArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:*
+
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub nascar-dashboard-site-${AWS::AccountId}-${AWS::Region}
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ApiFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: nascar-dashboard-api
+      Description: Runs the Race Rewind API Lambda. Mapped to the dashboard_reader DSQL role.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: dsql-connect
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: dsql:DbConnect
+                Resource: !Sub arn:aws:dsql:${AWS::Region}:${AWS::AccountId}:cluster/${DsqlClusterId}
+
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: nascar-dashboard-cloudformation
+      Description: CloudFormation uses this role to create and update the app stack.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: manage-app-stack
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: Function
+                Effect: Allow
+                Action: lambda:*
+                Resource:
+                  - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:nascar-dashboard-api
+                  - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:nascar-dashboard-api:*
+              - Sid: PassFunctionRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt ApiFunctionRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: lambda.amazonaws.com
+              - Sid: FunctionImage
+                Effect: Allow
+                Action:
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !GetAtt ApiRepository.Arn
+              - Sid: FunctionLogs
+                Effect: Allow
+                Action: logs:*
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/nascar-dashboard-api
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/nascar-dashboard-api:*
+              - Sid: DescribeLogGroups
+                Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: "*"
+              - Sid: SiteBucketPolicy
+                Effect: Allow
+                Action:
+                  - s3:GetBucketPolicy
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                Resource: !GetAtt SiteBucket.Arn
+              - Sid: Cdn
+                Effect: Allow
+                Action:
+                  - cloudfront:*Distribution*
+                  - cloudfront:*OriginAccessControl*
+                  - cloudfront:*CachePolicy*
+                  - cloudfront:*OriginRequestPolicy*
+                  - cloudfront:*ResponseHeadersPolicy*
+                  - cloudfront:*Function*
+                  - cloudfront:*Tag*
+                Resource: "*"
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: nascar-dashboard-github-deploy
+      Description: Assumed by the Release workflow to push the API image and deploy the app stack.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubRepository}:environment:${GitHubEnvironment}
+      Policies:
+        - PolicyName: deploy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadStacks
+                Effect: Allow
+                Action: cloudformation:DescribeStacks
+                Resource:
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*
+              - Sid: DeployAppStack
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:GetTemplateSummary
+                Resource:
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:changeSet/*
+              - Sid: DeleteFailedAppStack
+                Effect: Allow
+                Action: cloudformation:DeleteStack
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*
+              - Sid: ValidateTemplates
+                Effect: Allow
+                Action:
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:ValidateTemplate
+                Resource: "*"
+              - Sid: PassCloudFormationRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt CloudFormationRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: cloudformation.amazonaws.com
+              - Sid: EcrLogin
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Sid: PushImage
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource: !GetAtt ApiRepository.Arn
+              - Sid: UploadSite
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !GetAtt SiteBucket.Arn
+                  - !Sub ${SiteBucket.Arn}/*
+              - Sid: InvalidateCdn
+                Effect: Allow
+                Action:
+                  - cloudfront:CreateInvalidation
+                  - cloudfront:GetInvalidation
+                Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
+
+Outputs:
+  ApiRepositoryUri:
+    Value: !GetAtt ApiRepository.RepositoryUri
+  ApiFunctionRoleArn:
+    Value: !GetAtt ApiFunctionRole.Arn
+  CloudFormationRoleArn:
+    Value: !GetAtt CloudFormationRole.Arn
+  GitHubDeployRoleArn:
+    Value: !GetAtt GitHubDeployRole.Arn
+  DsqlEndpoint:
+    Value: !Sub ${DsqlClusterId}.dsql.${AWS::Region}.on.aws
+  SiteBucketName:
+    Value: !Ref SiteBucket
+  SiteBucketDomainName:
+    Value: !GetAtt SiteBucket.RegionalDomainName
