@@ -37,7 +37,12 @@ aws cloudformation deploy \
     ApiFunctionRoleArn="$(stack_output "$BOOTSTRAP_STACK" ApiFunctionRoleArn)" \
     DsqlEndpoint="$(stack_output "$BOOTSTRAP_STACK" DsqlEndpoint)" \
     SiteBucketName="$BUCKET" \
-    SiteBucketDomainName="$(stack_output "$BOOTSTRAP_STACK" SiteBucketDomainName)"
+    SiteBucketDomainName="$(stack_output "$BOOTSTRAP_STACK" SiteBucketDomainName)" \
+    CertificateArn="$(domains_output CertificateArn)" \
+    PrimaryDomain="$(domains_output PrimaryDomain)" \
+    PrimaryHostedZoneId="$(domains_output PrimaryHostedZoneId)" \
+    SecondaryDomain="$(domains_output SecondaryDomain)" \
+    SecondaryHostedZoneId="$(domains_output SecondaryHostedZoneId)"
 
 echo "Uploading the UI to s3://$BUCKET"
 # Hashed bundles never change, so browsers can keep them; older ones stay for

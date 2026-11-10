@@ -23,6 +23,27 @@ Parameters:
     Type: Number
     Default: 1024
     Description: Lambda memory in MB. CPU scales with it.
+  CertificateArn:
+    Type: String
+    Description: us-east-1 certificate covering both domains (domains stack output).
+  PrimaryDomain:
+    Type: String
+    Description: Domain the site URL uses (domains stack output).
+  PrimaryHostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Hosted zone of the primary domain (domains stack output).
+  SecondaryDomain:
+    Type: String
+    Description: Second domain serving the site (domains stack output).
+  SecondaryHostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Hosted zone of the secondary domain (domains stack output).
+
+Mappings:
+  CloudFront:
+    Alias:
+      # Fixed hosted zone ID that Route 53 alias records use for every CloudFront distribution.
+      HostedZoneId: Z2FDTNDATAQYW2
 
 Resources:
   ApiLogGroup:
@@ -162,6 +183,15 @@ Resources:
         IPV6Enabled: true
         PriceClass: PriceClass_100
         DefaultRootObject: index.html
+        Aliases:
+          - !Ref PrimaryDomain
+          - !Sub www.${PrimaryDomain}
+          - !Ref SecondaryDomain
+          - !Sub www.${SecondaryDomain}
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
         Origins:
           - Id: site
             DomainName: !Ref SiteBucketDomainName
@@ -197,9 +227,63 @@ Resources:
             # Managed policy AllViewerExceptHostHeader: the function URL needs its own Host.
             OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
 
+  PrimaryDomainRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref PrimaryHostedZoneId
+      RecordSets:
+        - Name: !Ref PrimaryDomain
+          Type: A
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+        - Name: !Ref PrimaryDomain
+          Type: AAAA
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+        - Name: !Sub www.${PrimaryDomain}
+          Type: A
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+        - Name: !Sub www.${PrimaryDomain}
+          Type: AAAA
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+
+  SecondaryDomainRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref SecondaryHostedZoneId
+      RecordSets:
+        - Name: !Ref SecondaryDomain
+          Type: A
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+        - Name: !Ref SecondaryDomain
+          Type: AAAA
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+        - Name: !Sub www.${SecondaryDomain}
+          Type: A
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+        - Name: !Sub www.${SecondaryDomain}
+          Type: AAAA
+          AliasTarget:
+            DNSName: !GetAtt Distribution.DomainName
+            HostedZoneId: !FindInMap [CloudFront, Alias, HostedZoneId]
+
 Outputs:
   SiteUrl:
-    Value: !Sub https://${Distribution.DomainName}
+    Value: !Sub https://${PrimaryDomain}
+  DistributionDomainName:
+    Value: !GetAtt Distribution.DomainName
   DistributionId:
     Value: !Ref Distribution
   FunctionName:
