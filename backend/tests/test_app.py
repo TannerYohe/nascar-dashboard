@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 
 import pytest
@@ -16,7 +16,7 @@ def _broken_session() -> Iterator[Session]:
 
 
 @contextmanager
-def _capturing_litestar_logs(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
+def _capturing_litestar_logs(caplog: pytest.LogCaptureFixture) -> Generator[None]:
     """Send records from the `litestar` logger, which doesn't propagate, to `caplog`."""
     logger = logging.getLogger("litestar")
     logger.addHandler(caplog.handler)

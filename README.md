@@ -88,7 +88,7 @@ Keyboard shortcuts on the replay: Space play/pause · ←/→ previous/next lap 
 ## Tests
 
 ```sh
-cd backend && uv run pytest && uv run ruff check && uv run ty check src
+cd backend && uv run pytest && uv run ruff check && uv run ty check src tests
 cd frontend && npm test && npx tsc -b
 ```
 
