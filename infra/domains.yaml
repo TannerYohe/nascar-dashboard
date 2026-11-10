@@ -51,6 +51,48 @@ Resources:
       ResourceRecords:
         - '"v=spf1 -all"'
 
+  # DMARC makes receivers reject mail with a forged From address on the domain.
+  PrimaryDmarc:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PrimaryHostedZone
+      Name: !Sub _dmarc.${PrimaryDomain}
+      Type: TXT
+      TTL: "3600"
+      ResourceRecords:
+        - '"v=DMARC1; p=reject;"'
+
+  SecondaryDmarc:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref SecondaryHostedZone
+      Name: !Sub _dmarc.${SecondaryDomain}
+      Type: TXT
+      TTL: "3600"
+      ResourceRecords:
+        - '"v=DMARC1; p=reject;"'
+
+  # A null MX (RFC 7505) tells senders the domain accepts no mail.
+  PrimaryNullMx:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PrimaryHostedZone
+      Name: !Ref PrimaryDomain
+      Type: MX
+      TTL: "3600"
+      ResourceRecords:
+        - "0 ."
+
+  SecondaryNullMx:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref SecondaryHostedZone
+      Name: !Ref SecondaryDomain
+      Type: MX
+      TTL: "3600"
+      ResourceRecords:
+        - "0 ."
+
   # CloudFormation adds the validation records to the zones and waits until ACM
   # issues the certificate, which needs the registrar to point at the zones.
   Certificate:
