@@ -123,6 +123,20 @@ AWS_REGION=us-east-2 infra/deploy.sh <account>.dkr.ecr.us-east-2.amazonaws.com/n
 ECR keeps only the 5 newest images, so only the last 5 releases can be
 redeployed this way. For anything older, revert on `master`.
 
+Versions released before the custom domains have an `infra/app.yaml` without
+them. Deploying one removes the domains from the distribution and deletes their
+DNS records, taking nascardash.com and nasdash.com offline, and its smoke test
+only checks the `cloudfront.net` address, so nothing flags it. For those
+versions, revert on `master`, or check out only the UI from the tag and deploy
+with the current `infra/`:
+
+```sh
+git checkout v2026.11.2 -- frontend
+(cd frontend && npm ci && npm run build)
+AWS_REGION=us-east-2 infra/deploy.sh <account>.dkr.ecr.us-east-2.amazonaws.com/nascar-dashboard-api@sha256:...
+git checkout HEAD -- frontend
+```
+
 ## One-time setup
 
 This is already done for the current account. It's here for rebuilding.
@@ -141,7 +155,9 @@ aws cloudformation deploy --region us-east-2 \
 **2. Domains stack.** Deploy it, then point the registrar at its name servers:
 
 ```sh
-aws cloudformation deploy --region us-east-1   --stack-name nascar-dashboard-domains   --template-file infra/domains.yaml
+aws cloudformation deploy --region us-east-1 \
+  --stack-name nascar-dashboard-domains \
+  --template-file infra/domains.yaml
 ```
 
 The deploy creates both hosted zones, then waits until ACM issues the
@@ -150,13 +166,25 @@ waits, for each domain in Squarespace (Domains → the domain → DNS):
 
 1. Turn off DNSSEC. Route 53 doesn't sign these zones, so a DS record left at
    the registry makes every lookup fail.
-2. Under name servers, switch to custom name servers and enter the four from
-   `aws route53 get-hosted-zone --id <zone id>` (the stack's
-   `PrimaryNameServers` and `SecondaryNameServers` outputs list them too, once
-   it finishes).
+2. Under name servers, switch to custom name servers and enter the four the
+   zone lists. The stack has no outputs until it finishes, so find the zone by
+   name:
+
+   ```sh
+   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name nascardash.com \
+     --query "HostedZones[0].Id" --output text)
+   aws route53 get-hosted-zone --id "$ZONE_ID" --query "DelegationSet.NameServers"
+   ```
 
 The certificate is usually issued within an hour of the switch. The app stack
-can't be deployed before then, since CloudFront needs it.
+can't be deployed before then, since CloudFront needs it. `cloudformation deploy`
+stops waiting after about an hour and exits with an error, but the stack keeps
+going. Check on it with:
+
+```sh
+aws cloudformation describe-stacks --region us-east-1 \
+  --stack-name nascar-dashboard-domains --query "Stacks[0].StackStatus"
+```
 
 **3. DSQL role.** The `nascar` schema is owned by `admin`, and its tables by
 `cadence_writer`, so the grants come from both:
