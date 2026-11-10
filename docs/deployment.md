@@ -86,8 +86,8 @@ IAM roles, so a release can't widen its own permissions. The domains stack is in
    tagged with the version.
 4. Builds the UI and runs `infra/deploy.sh` with the image digest: it updates the
    `nascar-dashboard` stack, uploads the UI, and invalidates the CloudFront cache.
-5. Checks that `/api/health`, `/api/seasons` and `/` respond on
-   https://nascardash.com, then publishes a
+5. Checks that `/api/health` and `/api/seasons` respond on https://nascardash.com
+   and `/` on nascardash.com, nasdash.com and both `www` names, then publishes a
    GitHub Release with generated notes. `/api/seasons` reads the database, so
    this also checks the API's DSQL access.
 
@@ -131,10 +131,10 @@ versions, revert on `master`, or check out only the UI from the tag and deploy
 with the current `infra/`:
 
 ```sh
-git checkout v2026.11.2 -- frontend
+git checkout --no-overlay v2026.11.2 -- frontend
 (cd frontend && npm ci && npm run build)
 AWS_REGION=us-east-2 infra/deploy.sh <account>.dkr.ecr.us-east-2.amazonaws.com/nascar-dashboard-api@sha256:...
-git checkout HEAD -- frontend
+git checkout --no-overlay HEAD -- frontend
 ```
 
 ## One-time setup
@@ -152,7 +152,10 @@ aws cloudformation deploy --region us-east-2 \
   --parameter-overrides DsqlClusterId=<cluster-id>
 ```
 
-**2. Domains stack.** Deploy it, then point the registrar at its name servers:
+**2. Domains stack.** Deploy it, then point the registrar at its name servers.
+If you change the domains, pass the same `PrimaryDomain` and `SecondaryDomain`
+to the bootstrap stack, since its deploy role may only write those names'
+records.
 
 ```sh
 aws cloudformation deploy --region us-east-1 \
@@ -167,12 +170,14 @@ waits, for each domain in Squarespace (Domains → the domain → DNS):
 1. Turn off DNSSEC. Route 53 doesn't sign these zones, so a DS record left at
    the registry makes every lookup fail.
 2. Under name servers, switch to custom name servers and enter the four the
-   zone lists. The stack has no outputs until it finishes, so find the zone by
-   name:
+   zone lists. The stack has no outputs until it finishes, so read the zone id
+   from its resource (`PrimaryHostedZone` for nascardash.com,
+   `SecondaryHostedZone` for nasdash.com):
 
    ```sh
-   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name nascardash.com \
-     --query "HostedZones[0].Id" --output text)
+   ZONE_ID=$(aws cloudformation describe-stack-resource --region us-east-1 \
+     --stack-name nascar-dashboard-domains --logical-resource-id PrimaryHostedZone \
+     --query StackResourceDetail.PhysicalResourceId --output text)
    aws route53 get-hosted-zone --id "$ZONE_ID" --query "DelegationSet.NameServers"
    ```
 

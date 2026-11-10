@@ -8,7 +8,7 @@ Parameters:
   PrimaryDomain:
     Type: String
     Default: nascardash.com
-    Description: Domain the site's links and the release smoke test use.
+    Description: Domain the site URL and the release's API checks use.
   SecondaryDomain:
     Type: String
     Default: nasdash.com
