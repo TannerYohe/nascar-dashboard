@@ -7,9 +7,11 @@ from collections.abc import Callable, Iterator
 from litestar import Litestar, Router, get
 from litestar.config.compression import CompressionConfig
 from litestar.config.cors import CORSConfig
+from litestar.datastructures import MutableScopeHeaders
 from litestar.di import Provide
 from litestar.logging.config import LoggingConfig
 from litestar.openapi import OpenAPIConfig
+from litestar.types import Message, Scope
 from sqlalchemy.orm import Session
 
 from .config import get_settings
@@ -20,6 +22,15 @@ from .routes import races, replay
 @get("/health", sync_to_thread=False)
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+def vary_on_accept_encoding(message: Message, scope: Scope) -> None:
+    """Add `Accept-Encoding` to `Vary` on compressed responses, since CORS overwrites `Vary`."""
+    if message["type"] != "http.response.start":
+        return
+    headers = MutableScopeHeaders.from_message(message)
+    if "content-encoding" in headers and "accept-encoding" not in headers.get("vary", "").lower():
+        headers.extend_header_value("vary", "Accept-Encoding")
 
 
 def create_app(session_provider: Callable[[], Iterator[Session]] = get_session) -> Litestar:
@@ -36,6 +47,7 @@ def create_app(session_provider: Callable[[], Iterator[Session]] = get_session) 
         ),
         openapi_config=OpenAPIConfig(title="NASCAR Dashboard API", version="0.1.0"),
         logging_config=LoggingConfig(log_exceptions="always"),
+        before_send=[vary_on_accept_encoding],
     )
 
 
