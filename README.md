@@ -104,4 +104,4 @@ The plan is AWS serverless, like cadence: the API on Lambda behind a Function UR
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE): free to use, change and share for any noncommercial purpose. Commercial use needs a separate license.
+[PolyForm Noncommercial 1.0.0](LICENSE): free to use, change and share for any noncommercial purpose. Commercial use needs a separate license. The track layouts in `frontend/public/tracks/` are derived from OpenStreetMap and are licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/) instead (see [Track maps](#track-maps)).
