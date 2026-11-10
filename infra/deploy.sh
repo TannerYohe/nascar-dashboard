@@ -6,14 +6,10 @@
 set -euo pipefail
 
 IMAGE_URI=${1:?usage: infra/deploy.sh <image-uri>}
-BOOTSTRAP_STACK=${BOOTSTRAP_STACK:-nascar-dashboard-bootstrap}
-APP_STACK=${APP_STACK:-nascar-dashboard}
 DIST_DIR=frontend/dist
 
-stack_output() {
-  aws cloudformation describe-stacks --stack-name "$1" \
-    --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
-}
+# shellcheck source=infra/stacks.sh
+source "$(dirname "$0")/stacks.sh"
 
 if [ ! -f "$DIST_DIR/index.html" ]; then
   echo "No UI build at $DIST_DIR. Run 'npm run build' in frontend/ first." >&2

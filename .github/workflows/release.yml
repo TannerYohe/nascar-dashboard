@@ -61,8 +61,8 @@ jobs:
 
       - name: Look up the image repository
         run: |
-          REPOSITORY=$(aws cloudformation describe-stacks --stack-name nascar-dashboard-bootstrap \
-            --query "Stacks[0].Outputs[?OutputKey=='ApiRepositoryUri'].OutputValue" --output text)
+          source infra/stacks.sh
+          REPOSITORY=$(stack_output "$BOOTSTRAP_STACK" ApiRepositoryUri)
           echo "REPOSITORY=$REPOSITORY" >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@v4
