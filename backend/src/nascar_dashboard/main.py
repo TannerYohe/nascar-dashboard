@@ -46,7 +46,7 @@ def create_app(session_provider: Callable[[], Iterator[Session]] = get_session) 
             allow_headers=["*"],
         ),
         openapi_config=OpenAPIConfig(title="NASCAR Dashboard API", version="0.1.0"),
-        logging_config=LoggingConfig(log_exceptions="always"),
+        logging_config=LoggingConfig(log_exceptions="always", disable_stack_trace={400, 404, 405}),
         before_send=[vary_on_accept_encoding],
     )
 
