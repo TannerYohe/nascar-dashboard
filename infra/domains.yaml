@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Race Rewind custom domains: a Route 53 hosted zone for each domain and the
+  CloudFront certificate covering them. Deployed by hand in us-east-1, the only
+  region CloudFront takes certificates from.
+
+Parameters:
+  PrimaryDomain:
+    Type: String
+    Default: nascardash.com
+    Description: Domain the site's links and the release smoke test use.
+  SecondaryDomain:
+    Type: String
+    Default: nasdash.com
+    Description: Second domain serving the same site.
+
+Resources:
+  # Retained so a stack mistake can't change the name servers the registrar points at.
+  PrimaryHostedZone:
+    Type: AWS::Route53::HostedZone
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Ref PrimaryDomain
+
+  SecondaryHostedZone:
+    Type: AWS::Route53::HostedZone
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Ref SecondaryDomain
+
+  # Neither domain sends email, so receivers should reject mail claiming to be from it.
+  PrimaryNoEmail:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref PrimaryHostedZone
+      Name: !Ref PrimaryDomain
+      Type: TXT
+      TTL: "3600"
+      ResourceRecords:
+        - '"v=spf1 -all"'
+
+  SecondaryNoEmail:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref SecondaryHostedZone
+      Name: !Ref SecondaryDomain
+      Type: TXT
+      TTL: "3600"
+      ResourceRecords:
+        - '"v=spf1 -all"'
+
+  # CloudFormation adds the validation records to the zones and waits until ACM
+  # issues the certificate, which needs the registrar to point at the zones.
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref PrimaryDomain
+      SubjectAlternativeNames:
+        - !Sub www.${PrimaryDomain}
+        - !Ref SecondaryDomain
+        - !Sub www.${SecondaryDomain}
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref PrimaryDomain
+          HostedZoneId: !Ref PrimaryHostedZone
+        - DomainName: !Sub www.${PrimaryDomain}
+          HostedZoneId: !Ref PrimaryHostedZone
+        - DomainName: !Ref SecondaryDomain
+          HostedZoneId: !Ref SecondaryHostedZone
+        - DomainName: !Sub www.${SecondaryDomain}
+          HostedZoneId: !Ref SecondaryHostedZone
+
+Outputs:
+  CertificateArn:
+    Value: !Ref Certificate
+  PrimaryDomain:
+    Value: !Ref PrimaryDomain
+  PrimaryHostedZoneId:
+    Value: !Ref PrimaryHostedZone
+  PrimaryNameServers:
+    Value: !Join [", ", !GetAtt PrimaryHostedZone.NameServers]
+  SecondaryDomain:
+    Value: !Ref SecondaryDomain
+  SecondaryHostedZoneId:
+    Value: !Ref SecondaryHostedZone
+  SecondaryNameServers:
+    Value: !Join [", ", !GetAtt SecondaryHostedZone.NameServers]
