@@ -24,7 +24,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def vary_on_accept_encoding(message: Message, scope: Scope) -> None:
+async def vary_on_accept_encoding(message: Message, scope: Scope) -> None:
     """Add `Accept-Encoding` to `Vary` on compressed responses, since CORS overwrites `Vary`."""
     if message["type"] != "http.response.start":
         return
