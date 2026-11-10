@@ -106,4 +106,4 @@ See [docs/deployment.md](docs/deployment.md) for the architecture, costs, rollba
 
 ## License
 
-[MIT](LICENSE)
+[PolyForm Noncommercial 1.0.0](LICENSE): free to use, change and share for any noncommercial purpose. Commercial use needs a separate license. The track layouts in `frontend/public/tracks/` are derived from OpenStreetMap and are licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/) instead (see [Track maps](#track-maps)).
