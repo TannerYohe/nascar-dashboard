@@ -100,6 +100,6 @@ def get_sessionmaker() -> sessionmaker[Session]:
 
 
 def get_session() -> Iterator[Session]:
-    """FastAPI dependency: one session per request."""
+    """Request dependency: one session per request."""
     with get_sessionmaker()() as session:
         yield session

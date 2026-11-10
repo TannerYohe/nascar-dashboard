@@ -7,11 +7,11 @@ import uuid
 from collections.abc import Iterator
 
 import pytest
-from fastapi.testclient import TestClient
+from litestar.testing import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
-from nascar_dashboard.db import get_session, sqlite_engine
-from nascar_dashboard.main import app
+from nascar_dashboard.db import sqlite_engine
+from nascar_dashboard.main import create_app
 from nascar_dashboard.models import (
     Base,
     Race,
@@ -206,9 +206,6 @@ def client(db: sessionmaker[Session]) -> Iterator[TestClient]:
         with db() as session:
             yield session
 
-    app.dependency_overrides[get_session] = _session
     cache.clear()
-    try:
-        yield TestClient(app)
-    finally:
-        app.dependency_overrides.clear()
+    with TestClient(create_app(session_provider=_session)) as client:
+        yield client

@@ -35,7 +35,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: nascar-dashboard-api
-      Description: Race Rewind API (FastAPI via Lambda Web Adapter)
+      Description: Race Rewind API (Litestar via Lambda Web Adapter)
       PackageType: Image
       Code:
         ImageUri: !Ref ImageUri

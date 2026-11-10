@@ -8,7 +8,7 @@ cadence loads. Every merge to `master` releases and deploys a new version.
 ```
                          ┌──────────────── CloudFront ────────────────┐
  browser ── https ──▶    │  /*      → S3 bucket (built UI)            │
-                         │  /api/*  → Lambda function URL (FastAPI)   │──▶ Aurora DSQL
+                         │  /api/*  → Lambda function URL (Litestar)  │──▶ Aurora DSQL
                          └────────────────────────────────────────────┘    (dashboard_reader)
 ```
 
