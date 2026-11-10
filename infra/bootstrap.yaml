@@ -8,6 +8,10 @@ Parameters:
     Type: String
     Default: nascar-dashboard
     Description: Name of the stack deployed from app.yaml.
+  DomainsStackName:
+    Type: String
+    Default: nascar-dashboard-domains
+    Description: Name of the stack deployed from domains.yaml in us-east-1.
   DsqlClusterId:
     Type: String
     Description: Identifier of the Aurora DSQL cluster cadence loads.
@@ -157,6 +161,25 @@ Resources:
                   - cloudfront:*Function*
                   - cloudfront:*Tag*
                 Resource: "*"
+              - Sid: DomainCertificate
+                Effect: Allow
+                Action: acm:DescribeCertificate
+                Resource: !Sub arn:aws:acm:us-east-1:${AWS::AccountId}:certificate/*
+              - Sid: ListCertificates
+                Effect: Allow
+                Action: acm:ListCertificates
+                Resource: "*"
+              - Sid: DomainRecords
+                Effect: Allow
+                Action:
+                  - route53:ChangeResourceRecordSets
+                  - route53:GetHostedZone
+                  - route53:ListResourceRecordSets
+                Resource: arn:aws:route53:::hostedzone/*
+              - Sid: DomainRecordChanges
+                Effect: Allow
+                Action: route53:GetChange
+                Resource: arn:aws:route53:::change/*
 
   GitHubDeployRole:
     Type: AWS::IAM::Role
@@ -185,6 +208,7 @@ Resources:
                 Resource:
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*
+                  - !Sub arn:aws:cloudformation:us-east-1:${AWS::AccountId}:stack/${DomainsStackName}/*
               - Sid: DeployAppStack
                 Effect: Allow
                 Action:
