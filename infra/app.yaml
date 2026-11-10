@@ -30,13 +30,13 @@ Parameters:
     Type: String
     Description: Domain the site URL uses (domains stack output).
   PrimaryHostedZoneId:
-    Type: AWS::Route53::HostedZone::Id
+    Type: String
     Description: Hosted zone of the primary domain (domains stack output).
   SecondaryDomain:
     Type: String
     Description: Second domain serving the site (domains stack output).
   SecondaryHostedZoneId:
-    Type: AWS::Route53::HostedZone::Id
+    Type: String
     Description: Hosted zone of the secondary domain (domains stack output).
 
 Mappings:
