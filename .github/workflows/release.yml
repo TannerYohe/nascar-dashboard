@@ -105,7 +105,14 @@ jobs:
           curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 10 \
             "$SITE_URL/api/health"
           curl --fail --silent --show-error --output /dev/null "$SITE_URL/api/seasons"
-          curl --fail --silent --show-error --output /dev/null "$SITE_URL/"
+          source infra/stacks.sh
+          for DOMAIN in "$(domains_output PrimaryDomain)" "$(domains_output SecondaryDomain)"; do
+            for HOST in "$DOMAIN" "www.$DOMAIN"; do
+              echo "Checking https://$HOST/"
+              curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 10 \
+                --output /dev/null "https://$HOST/"
+            done
+          done
 
       - name: Publish GitHub Release
         env:
