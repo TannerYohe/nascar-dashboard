@@ -99,13 +99,18 @@ again. That's why the deploy role may also delete the app stack.
 ### Rolling back
 
 Revert the bad commit on `master`; the release that follows redeploys the
-previous code. For a faster fix, redeploy an earlier image by hand, using the
-digest from that version's GitHub Release:
+previous code. For a faster fix, redeploy an earlier version by hand. Check out
+its tag first, so the UI and templates match its API, then pass the image digest
+from that version's GitHub Release:
 
 ```sh
-(cd frontend && npm run build)
+git checkout v2026.11.3
+(cd frontend && npm ci && npm run build)
 AWS_REGION=us-east-2 infra/deploy.sh <account>.dkr.ecr.us-east-2.amazonaws.com/nascar-dashboard-api@sha256:...
 ```
+
+ECR keeps only the 5 newest images, so only the last 5 releases can be
+redeployed this way. For anything older, revert on `master`.
 
 ## One-time setup
 
