@@ -76,8 +76,9 @@ IAM roles, so a release can't widen its own permissions. A change to
    tagged with the version.
 4. Builds the UI and runs `infra/deploy.sh` with the image digest: it updates the
    `nascar-dashboard` stack, uploads the UI, and invalidates the CloudFront cache.
-5. Checks that `/api/health` and `/` respond, then publishes a GitHub Release
-   with generated notes.
+5. Checks that `/api/health`, `/api/seasons` and `/` respond, then publishes a
+   GitHub Release with generated notes. `/api/seasons` reads the database, so
+   this also checks the API's DSQL access.
 
 The job runs in the `production` GitHub environment, so each release shows up
 under the repo's Environments, linked to the site. Releases queue rather than
