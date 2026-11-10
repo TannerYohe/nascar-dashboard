@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
 
-# Never run two releases at once; queue them instead.
+# Never run two releases at once. A newer merge replaces a release still waiting to start.
 concurrency:
   group: release
   cancel-in-progress: false

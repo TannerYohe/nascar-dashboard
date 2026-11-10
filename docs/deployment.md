@@ -81,8 +81,10 @@ IAM roles, so a release can't widen its own permissions. A change to
    this also checks the API's DSQL access.
 
 The job runs in the `production` GitHub environment, so each release shows up
-under the repo's Environments, linked to the site. Releases queue rather than
-run at the same time.
+under the repo's Environments, linked to the site. Two releases never run at
+once. GitHub keeps only one waiting behind a running release, so if several
+merges land while one is running, only the newest is released: the merges in
+between ship with it and get no version of their own.
 
 GitHub reaches AWS with OIDC: the `nascar-dashboard-github-deploy` role trusts
 only this repository's `production` environment. It can push images, upload the
