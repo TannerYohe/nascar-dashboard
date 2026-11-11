@@ -33,20 +33,29 @@ export function useSeasons() {
 
 interface RacesOptions {
   year?: number
-  series?: number
   enabled?: boolean
 }
 
-export function racesQuery(year?: number, series?: number) {
+/** Every race in `year`, or in every year when it's undefined. */
+export function racesQuery(year?: number) {
   return queryOptions({
-    queryKey: ['races', year ?? 'all', series ?? 'all'],
-    queryFn: () => api.races(year, series),
+    queryKey: ['races', year ?? 'all'],
+    queryFn: () => api.races(year),
     staleTime: 5 * 60 * 1000,
   })
 }
 
-export function useRaces({ year, series, enabled = true }: RacesOptions = {}) {
-  return useQuery({ ...racesQuery(year, series), enabled })
+export function useRaces({ year, enabled = true }: RacesOptions = {}) {
+  return useQuery({ ...racesQuery(year), enabled })
+}
+
+/** One series' races in `year`, filtered from that season's listing; does nothing while `year` is undefined. */
+export function useSeriesRaces(year: number | undefined, series: number) {
+  return useQuery({
+    ...racesQuery(year),
+    select: (races) => races.filter((r) => r.series_id === series),
+    enabled: year != null,
+  })
 }
 
 /** How long a bundle that's still filling in stays fresh before reopening the race fetches it again. */

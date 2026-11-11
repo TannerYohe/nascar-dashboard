@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { Link, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
 
-import { useRaces, useReplayRace, useSeasons } from '../api/client'
+import { useReplayRace, useSeasons, useSeriesRaces } from '../api/client'
 import { CommandPalette } from '../features/picker/CommandPalette'
 import { RaceRows } from '../features/picker/RaceList'
 import { SERIES, seriesName } from '../lib/racing'
@@ -193,9 +193,7 @@ function SeriesCrumb({ year, series }: { year: number; series: number }) {
 }
 
 function RaceCrumb({ year, series, raceId, name }: { year: number; series: number; raceId: number; name: string }) {
-  // Filters the season listing, which the home page has usually fetched already.
-  const season = useRaces({ year })
-  const races = season.data?.filter((r) => r.series_id === series)
+  const races = useSeriesRaces(year, series).data
   return (
     <Crumb label={name} wide>
       {(close) => (

@@ -3,7 +3,7 @@ import { Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { useRaces, useSeasons } from '../../api/client'
+import { useSeasons, useSeriesRaces } from '../../api/client'
 import { SERIES } from '../../lib/racing'
 import { RaceCard } from './RaceList'
 
@@ -14,7 +14,7 @@ export function RacesPage() {
   const years = useMemo(() => seasons.data?.map((s) => s.year) ?? [], [seasons.data])
   const year = Number(params.get('year')) || years[0]
   const series = Number(params.get('series')) || 1
-  const races = useRaces({ year, series, enabled: year != null })
+  const races = useSeriesRaces(year, series)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
