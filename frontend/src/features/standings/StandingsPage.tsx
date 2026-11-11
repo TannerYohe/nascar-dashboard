@@ -1,11 +1,12 @@
 import { clsx } from 'clsx'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 
 import { useStandings } from '../../api/client'
 import type { SeasonStandings } from '../../api/types'
 import { Problem } from '../../components/Problem'
+import { useDocumentTitle } from '../../lib/brand'
 import { cleanName, shortDate } from '../../lib/format'
 import { seriesName } from '../../lib/racing'
 import { SeasonPicker } from '../picker/SeasonPicker'
@@ -38,9 +39,7 @@ export function StandingsPage() {
   const { year, series, seasons } = useSeasonParams()
   const standings = useStandings(year, series)
 
-  useEffect(() => {
-    document.title = 'Standings · NasDash'
-  }, [])
+  useDocumentTitle('Standings')
 
   const error = seasons.error ?? standings.error
   return (
