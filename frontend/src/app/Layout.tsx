@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { useState } from 'react'
 import { Link, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
 
-import { useRace, useRaces, useSeasons } from '../api/client'
+import { useRaces, useReplayRace, useSeasons } from '../api/client'
 import { CommandPalette } from '../features/picker/CommandPalette'
 import { RaceRows } from '../features/picker/RaceList'
 import { SERIES, seriesName } from '../lib/racing'
@@ -44,7 +44,7 @@ export function Layout() {
 function Breadcrumb() {
   const replay = useMatch('/replay/:raceId')
   const raceId = replay ? Number(replay.params.raceId) : undefined
-  const race = useRace(raceId)
+  const race = useReplayRace(raceId)
   const [params] = useSearchParams()
   const seasons = useSeasons()
 
