@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router'
 import { useReplay } from '../../api/client'
 import { Problem } from '../../components/Problem'
 import type { ReplayBundle } from '../../api/types'
+import { useDocumentTitle } from '../../lib/brand'
 import { longDate } from '../../lib/format'
 import { flagStyle, seriesName } from '../../lib/racing'
 import { CarFilter } from './CarFilter'
@@ -39,15 +40,15 @@ function Replay({ bundle }: { bundle: ReplayBundle }) {
     const start = startT > 0 ? startT : startLap > 1 ? lapSeekTime(model, startLap) : 0
     useReplayStore.getState().reset(model.duration, start)
     const stop = startClockLoop()
-    document.title = `${bundle.race.race_name ?? 'Race'} · Race Rewind`
     return () => {
       stop()
       useReplayStore.getState().pause()
     }
     // Only on load: the lap in the URL is where the replay starts, not a binding.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, bundle.race.race_name])
+  }, [model])
 
+  useDocumentTitle(bundle.race.race_name ?? 'Race')
   useKeyboard(model)
 
   const t = useReplayStore((s) => s.t)

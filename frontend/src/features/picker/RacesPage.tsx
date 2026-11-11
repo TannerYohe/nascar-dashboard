@@ -1,7 +1,8 @@
 import { Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { useSeriesRaces } from '../../api/client'
+import { useDocumentTitle } from '../../lib/brand'
 import { RaceCard } from './RaceList'
 import { SeasonPicker } from './SeasonPicker'
 import { useSeasonParams } from './useSeasonParams'
@@ -12,9 +13,7 @@ export function RacesPage() {
   const races = useSeriesRaces(year, series)
   const [query, setQuery] = useState('')
 
-  useEffect(() => {
-    document.title = 'Races · Race Rewind'
-  }, [])
+  useDocumentTitle('Races')
 
   const q = query.trim().toLowerCase()
   const list = (races.data ?? []).filter(

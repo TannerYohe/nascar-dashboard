@@ -39,7 +39,7 @@ OVERPASS = [
     "https://overpass.private.coffee/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
 ]
-USER_AGENT = "race-rewind-track-builder/0.1 (+https://github.com/TannerYohe/nascar-dashboard)"
+USER_AGENT = "nasdash-track-builder/0.1 (+https://github.com/TannerYohe/nascar-dashboard)"
 
 MILE = 1609.344
 VIEW = 1000.0  # longer side of the viewBox

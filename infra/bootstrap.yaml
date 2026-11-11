@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Race Rewind one-time setup: the API image repository, the API's IAM role, and the
+  NasDash one-time setup: the API image repository, the API's IAM role, and the
   roles GitHub Actions uses to deploy the app stack (app.yaml).
 
 Parameters:
@@ -86,7 +86,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: nascar-dashboard-api
-      Description: Runs the Race Rewind API Lambda. Mapped to the dashboard_reader DSQL role.
+      Description: Runs the NasDash API Lambda. Mapped to the dashboard_reader DSQL role.
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:

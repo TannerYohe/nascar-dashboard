@@ -1,8 +1,8 @@
-# Race Rewind
+# NasDash
 
 > **Work in progress.** The replay screen and championship standings are the first pages; more are coming.
 
-A web app for replaying NASCAR races. Pick a season, series and race, then watch the field run lap by lap on a map of the track, with:
+A web app for exploring NASCAR seasons: replay any race and follow the championship standings. To replay a race, pick a season, series and race, then watch the field run lap by lap on a map of the track, with:
 
 - the flag state, lap, stage, and laps to go
 - the running order, with gap to the leader or interval to the car ahead, last and best lap times, and pit stop counts
