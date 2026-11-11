@@ -1,10 +1,10 @@
 import * as Popover from '@radix-ui/react-popover'
 import { clsx } from 'clsx'
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
 
-import { useRace, useRaces, useSeasons } from '../api/client'
+import { useReplayRace, useSeasons, useSeriesRaces } from '../api/client'
 import { CommandPalette } from '../features/picker/CommandPalette'
 import { RaceRows } from '../features/picker/RaceList'
 import { SERIES, seriesName } from '../lib/racing'
@@ -42,29 +42,62 @@ export function Layout() {
 
 /** Year › Series › Race, each one a popover to change that level. */
 function Breadcrumb() {
+  const home = useMatch('/')
   const replay = useMatch('/replay/:raceId')
   const raceId = replay ? Number(replay.params.raceId) : undefined
-  const race = useRace(raceId)
+  const race = useReplayRace(raceId)
   const [params] = useSearchParams()
   const seasons = useSeasons()
+
+  // Shows three placeholder crumbs on "/" and while the replay loads.
+  const racePending = home ? !seasons.isError : raceId != null && race.isPending
+  if (racePending) return <BreadcrumbPlaceholder crumbs={3} />
 
   const current = raceId ? race.data : undefined
   const year = current?.season ?? (Number(params.get('year')) || seasons.data?.[0]?.year)
   const series = current?.series_id ?? (Number(params.get('series')) || 1)
-  if (!year) return null
+  if (!year) return seasons.isPending ? <BreadcrumbPlaceholder crumbs={2} /> : null
 
   return (
-    <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb">
+    <BreadcrumbNav>
       <YearCrumb year={year} series={series} />
-      <ChevronRight size={14} className="shrink-0 text-faint" />
+      <CrumbSeparator />
       <SeriesCrumb year={year} series={series} />
       {current && (
         <>
-          <ChevronRight size={14} className="shrink-0 text-faint" />
+          <CrumbSeparator />
           <RaceCrumb year={year} series={series} raceId={current.race_id} name={current.race_name ?? 'Race'} />
         </>
       )}
+    </BreadcrumbNav>
+  )
+}
+
+function BreadcrumbNav({ busy, children }: { busy?: boolean; children: React.ReactNode }) {
+  return (
+    <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb" aria-busy={busy}>
+      {children}
     </nav>
+  )
+}
+
+function CrumbSeparator() {
+  return <ChevronRight size={14} className="shrink-0 text-faint" />
+}
+
+const PLACEHOLDER_WIDTHS = ['w-10', 'w-24', 'w-48']
+
+/** Pulsing stand-ins for the first `crumbs` crumbs while the data behind them loads. */
+function BreadcrumbPlaceholder({ crumbs }: { crumbs: number }) {
+  return (
+    <BreadcrumbNav busy>
+      {PLACEHOLDER_WIDTHS.slice(0, crumbs).map((width, i) => (
+        <Fragment key={width}>
+          {i > 0 && <CrumbSeparator />}
+          <span className={clsx('mx-2 h-4 min-w-0 shrink animate-pulse rounded bg-hover', width)} />
+        </Fragment>
+      ))}
+    </BreadcrumbNav>
   )
 }
 
@@ -172,7 +205,7 @@ function SeriesCrumb({ year, series }: { year: number; series: number }) {
 }
 
 function RaceCrumb({ year, series, raceId, name }: { year: number; series: number; raceId: number; name: string }) {
-  const races = useRaces({ year, series })
+  const races = useSeriesRaces(year, series).data
   return (
     <Crumb label={name} wide>
       {(close) => (
@@ -180,7 +213,7 @@ function RaceCrumb({ year, series, raceId, name }: { year: number; series: numbe
           <div className="border-b border-line px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-faint">
             {year} {seriesName(series)}
           </div>
-          {races.data ? <RaceRows races={races.data} currentId={raceId} onPick={close} /> : <div className="p-4 text-xs text-faint">Loading…</div>}
+          {races ? <RaceRows races={races} currentId={raceId} onPick={close} /> : <div className="p-4 text-xs text-faint">Loading…</div>}
         </>
       )}
     </Crumb>

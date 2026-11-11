@@ -1,12 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
-import { api, useSeasons } from '../api/client'
+import { racesQuery, useSeasons } from '../api/client'
 import { Problem } from '../components/Problem'
 
 /** "/" opens the most recent Cup race that can be replayed. */
 export function Home() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const seasons = useSeasons()
 
   useEffect(() => {
@@ -14,7 +16,7 @@ export function Home() {
     let live = true
     ;(async () => {
       for (const { year } of seasons.data) {
-        const races = await api.races(year)
+        const races = await queryClient.fetchQuery(racesQuery(year))
         const playable = races
           .filter((r) => r.has_lap_data && r.status !== 'scheduled')
           .sort((a, b) => (b.race_date ?? '').localeCompare(a.race_date ?? '') || a.series_id - b.series_id)
@@ -29,7 +31,7 @@ export function Home() {
     return () => {
       live = false
     }
-  }, [seasons.data, navigate])
+  }, [seasons.data, navigate, queryClient])
 
   if (seasons.error) return <Problem title="Couldn't reach the API" detail="Is the backend running on port 8000?" />
   return (

@@ -1,6 +1,6 @@
-import { skipToken, useQuery } from '@tanstack/react-query'
+import { queryOptions, skipToken, useQuery } from '@tanstack/react-query'
 
-import type { RaceDetail, RaceSummary, ReplayBundle, Season } from './types'
+import type { RaceSummary, ReplayBundle, Season } from './types'
 
 export class ApiError extends Error {
   status: number
@@ -22,7 +22,6 @@ async function get<T>(path: string, params?: Record<string, string | number | un
 export const api = {
   seasons: () => get<Season[]>('/seasons'),
   races: (year?: number, series?: number) => get<RaceSummary[]>('/races', { year, series }),
-  race: (raceId: number) => get<RaceDetail>(`/races/${raceId}`),
   replay: (raceId: number) => get<ReplayBundle>(`/races/${raceId}/replay`),
 }
 
@@ -34,35 +33,47 @@ export function useSeasons() {
 
 interface RacesOptions {
   year?: number
-  series?: number
   enabled?: boolean
 }
 
-export function useRaces({ year, series, enabled = true }: RacesOptions = {}) {
-  return useQuery({
-    queryKey: ['races', year ?? 'all', series ?? 'all'],
-    queryFn: () => api.races(year, series),
+/** Every race in `year`, or in every year when it's undefined. */
+export function racesQuery(year?: number) {
+  return queryOptions({
+    queryKey: ['races', year ?? 'all'],
+    queryFn: () => api.races(year),
     staleTime: 5 * 60 * 1000,
-    enabled,
   })
 }
 
-/** One race's details; does nothing while `raceId` is undefined. */
-export function useRace(raceId: number | undefined) {
+export function useRaces({ year, enabled = true }: RacesOptions = {}) {
+  return useQuery({ ...racesQuery(year), enabled })
+}
+
+/** One series' races in `year`, filtered from that season's listing; does nothing while `year` is undefined. */
+export function useSeriesRaces(year: number | undefined, series: number) {
   return useQuery({
-    queryKey: ['race', raceId],
-    queryFn: raceId == null ? skipToken : () => api.race(raceId),
-    staleTime: HOUR,
+    ...racesQuery(year),
+    select: (races) => races.filter((r) => r.series_id === series),
+    enabled: year != null,
   })
 }
 
 /** How long a bundle that's still filling in stays fresh before reopening the race fetches it again. */
 const INCOMPLETE_REFETCH = 30 * 1000
 
-export function useReplay(raceId: number) {
-  return useQuery({
+function replayQuery(raceId: number | undefined) {
+  return queryOptions({
     queryKey: ['replay', raceId],
-    queryFn: () => api.replay(raceId),
+    queryFn: raceId == null ? skipToken : () => api.replay(raceId),
     staleTime: (query) => (query.state.data?.complete ? Infinity : INCOMPLETE_REFETCH),
   })
+}
+
+export function useReplay(raceId: number) {
+  return useQuery(replayQuery(raceId))
+}
+
+/** The details of the race being replayed, read from the replay bundle; does nothing while `raceId` is undefined. */
+export function useReplayRace(raceId: number | undefined) {
+  return useQuery({ ...replayQuery(raceId), select: (bundle) => bundle.race })
 }
