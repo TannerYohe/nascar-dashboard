@@ -2,6 +2,7 @@ import { clsx } from 'clsx'
 import { Fragment } from 'react'
 
 import type { DriverSeason, SeasonStandings } from '../../api/types'
+import { cleanName } from '../../lib/format'
 import { divider, highlightColor, positionChange, type Status, standingsAt, status } from './model'
 
 interface Props {
@@ -117,7 +118,7 @@ function Row({ d, standings: s, race, worst, slot, hovered, onHover, onToggle }:
             aria-hidden
           />
           <span className="tabular w-7 shrink-0 text-right text-xs text-faint">#{d.car_number ?? '–'}</span>
-          <span className="truncate font-medium">{d.name}</span>
+          <span className="truncate font-medium">{cleanName(d.name)}</span>
           {d.is_rookie && (
             <span className="rounded border border-line-strong px-1 text-[10px] font-semibold text-muted" title="Rookie">
               R

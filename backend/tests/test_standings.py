@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from nascar_dashboard.models import PointsStanding, Race, RaceResult
 from nascar_dashboard.schemas import RaceSummary
-from nascar_dashboard.services.standings import clean_name, playoff_format
+from nascar_dashboard.services.standings import playoff_format
 
 YEAR = 2030
 UTC = datetime.UTC
@@ -85,7 +85,11 @@ def test_season_standings(client: TestClient) -> None:
     assert body["champion_id"] == 1
 
     alpha, bravo, charlie = body["drivers"]
-    assert [d["name"] for d in body["drivers"]] == ["Alpha One", "Bravo Two", "Charlie Three"]
+    assert [d["name"] for d in body["drivers"]] == [
+        "Alpha One (C)",
+        "* Bravo Two #",
+        "Charlie Three(i)",
+    ]
     assert alpha["positions"] == [2, 1, 2, 1]
     assert alpha["points"] == [40, 95, 2130, 2185]
     assert alpha["in_playoffs"] == [False, False, True, True]
@@ -124,21 +128,6 @@ def test_season_without_standings_falls_back_to_the_series_field(client: TestCli
     assert body["drivers"] == []
     assert body["playoff_field"] == 16
     assert body["format"] == "none"
-
-
-@pytest.mark.parametrize(
-    ("first", "last", "expected"),
-    [
-        ("Denny", "Hamlin (C)", "Denny Hamlin"),
-        ("Ryan", "Blaney (P)", "Ryan Blaney"),
-        ("* Casey", "Mears(i)", "Casey Mears"),
-        ("Shane", "Van Gisbergen #", "Shane Van Gisbergen"),
-        ("Martin", "Truex, Jr.", "Martin Truex, Jr."),
-        (None, None, ""),
-    ],
-)
-def test_clean_name(first: str | None, last: str | None, expected: str) -> None:
-    assert clean_name(first, last) == expected
 
 
 def _race(playoff_round: int | None) -> RaceSummary:

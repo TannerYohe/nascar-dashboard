@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { DriverSeason, SeasonStandings } from '../../api/types'
-import { shortDate, surname } from '../../lib/format'
+import { cleanName, shortDate, surname } from '../../lib/format'
 import {
   type ChartMode,
   chartValue,
@@ -366,7 +366,7 @@ function Tooltip({ standings: s, race, left, top, width, rows, mode, hoverId }: 
             <li key={d.driver_id} className="flex items-center gap-2">
               <span className="h-0.5 w-3 shrink-0 rounded-full" style={{ background: color }} />
               <span className="tabular w-12 font-semibold text-ink">{formatValue(value, mode)}</span>
-              <span className={d.driver_id === hoverId ? 'truncate text-ink' : 'truncate text-muted'}>{d.name}</span>
+              <span className={d.driver_id === hoverId ? 'truncate text-ink' : 'truncate text-muted'}>{cleanName(d.name)}</span>
             </li>
           ))}
         </ul>

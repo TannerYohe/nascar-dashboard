@@ -174,6 +174,7 @@ class DriverSeason(BaseModel):
     """
 
     driver_id: int
+    # As the feed gives it, markers included.
     name: str
     car_number: int | None
     is_rookie: bool

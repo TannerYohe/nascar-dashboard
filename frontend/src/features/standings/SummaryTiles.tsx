@@ -1,7 +1,7 @@
 import { Crown, Flag, Trophy } from 'lucide-react'
 
 import type { DriverSeason, SeasonStandings } from '../../api/types'
-import { surname } from '../../lib/format'
+import { cleanName, surname } from '../../lib/format'
 import { phaseOf, playoffPhrase, standingsAt } from './model'
 
 function Tile({ icon, label, title, detail }: { icon: React.ReactNode; label: string; title: string; detail: string }) {
@@ -47,7 +47,7 @@ export function SummaryTiles({ standings: s }: { standings: SeasonStandings }) {
       <Tile
         icon={<Trophy size={13} className={champion ? 'text-accent' : undefined} />}
         label={champion ? `${s.season} champion` : 'Points leader'}
-        title={top?.name ?? '–'}
+        title={top ? cleanName(top.name) : '–'}
         detail={
           top
             ? `${top.points[latest]?.toLocaleString()} pts${margin != null && second ? ` · ${margin} ahead of ${surname(second.name)}` : ''}`
@@ -57,13 +57,13 @@ export function SummaryTiles({ standings: s }: { standings: SeasonStandings }) {
       <Tile
         icon={<Crown size={13} />}
         label={s.regular_season_champion_id != null ? 'Regular season champion' : 'Regular season leader'}
-        title={regular?.name ?? '–'}
+        title={regular ? cleanName(regular.name) : '–'}
         detail={regular ? `${regular.points[regularAt]?.toLocaleString()} pts · ${plural(regular.wins[regularAt] ?? 0, 'win')}` : ''}
       />
       <Tile
         icon={<Flag size={13} />}
         label="Most wins"
-        title={mostWins ? winners.map((d) => d.name).join(', ') : 'No winners yet'}
+        title={mostWins ? winners.map((d) => cleanName(d.name)).join(', ') : 'No winners yet'}
         detail={plural(mostWins, 'win')}
       />
       <Tile
