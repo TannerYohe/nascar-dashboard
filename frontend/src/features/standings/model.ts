@@ -106,7 +106,7 @@ export function divider(s: SeasonStandings, i: number): Divider | null {
     return { after: fieldAt(s, i), label: next ? 'Still in the playoffs' : all[k].label }
   }
   // Before 2026, race winners were locked in, so the top of the points wasn't the cutline.
-  if (s.format === 'chase' && s.playoff_field) return { after: s.playoff_field, label: 'Chase cutline' }
+  if (s.format === 'chase') return { after: s.playoff_field, label: 'Chase cutline' }
   return null
 }
 
@@ -128,7 +128,7 @@ export function chartDrivers(s: SeasonStandings, field: ChartField): DriverSeaso
   if (seeded.length) return seeded
   // Before the playoffs, the field plus the drivers just outside it.
   const latest = s.standings_through - 1
-  const reach = (s.playoff_field ?? 16) + 4
+  const reach = s.playoff_field + 4
   return standingsAt(s, latest).slice(0, reach)
 }
 
@@ -163,7 +163,7 @@ export function spreadLabels(ys: number[], gap: number, min: number, max: number
 export function formatSummary(s: SeasonStandings): string {
   const regular = s.races.filter((r) => !r.playoff_round).length
   const playoff = s.races.length - regular
-  const field = s.playoff_field ?? 16
+  const field = s.playoff_field
   if (s.format === 'chase') {
     const starts = s.drivers.map((d) => d.playoff_start_points).filter((p): p is number => p != null)
     const range = starts.length

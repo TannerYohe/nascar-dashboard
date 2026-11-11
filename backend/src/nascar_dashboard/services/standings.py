@@ -121,7 +121,7 @@ def season_standings(session: Session, year: int, series_id: int) -> SeasonStand
         season=year,
         series_id=series_id,
         format=playoff_format(races),
-        playoff_field=len(seeds) or DEFAULT_PLAYOFF_FIELD.get(series_id),
+        playoff_field=len(seeds) or DEFAULT_PLAYOFF_FIELD[series_id],
         races=races,
         standings_through=through,
         drivers=[_driver(d, snapshots, seeds.get(d)) for d in order],

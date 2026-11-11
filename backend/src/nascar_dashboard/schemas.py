@@ -196,7 +196,7 @@ class SeasonStandings(BaseModel):
     series_id: int
     # "elimination" cuts the field each round (through 2025); "chase" resets once (2026 on).
     format: PlayoffFormat
-    playoff_field: int | None
+    playoff_field: int
     # Points races in date order.
     races: list[RaceSummary]
     # How many of `races` have standings: the standings are as of races[standings_through - 1].
