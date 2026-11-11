@@ -8,6 +8,7 @@ import { Layout } from './app/Layout'
 import { Problem } from './components/Problem'
 import { RacesPage } from './features/picker/RacesPage'
 import { ReplayPage } from './features/replay/ReplayPage'
+import { StandingsPage } from './features/standings/StandingsPage'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/races', element: <RacesPage /> },
       { path: '/replay/:raceId', element: <ReplayPage /> },
+      { path: '/standings', element: <StandingsPage /> },
       { path: '*', element: <Problem title="Page not found" /> },
     ],
   },

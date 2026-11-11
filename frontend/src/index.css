@@ -27,6 +27,16 @@
   --color-best-personal: #4ade80;
 }
 
+/* Highlighted drivers on the standings chart, in slot order (checked for color-blind separation).
+   Outside @theme because no utility class uses them, so Tailwind would drop them. */
+:root {
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-series-3: #199e70;
+  --color-series-4: #c98500;
+  --color-series-5: #d55181;
+}
+
 html,
 body,
 #root {
