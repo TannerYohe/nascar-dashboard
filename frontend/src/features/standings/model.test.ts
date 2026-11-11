@@ -8,6 +8,7 @@ import {
   divider,
   formatSummary,
   formatValue,
+  linePath,
   niceTicks,
   phases,
   positionChange,
@@ -179,6 +180,12 @@ describe('highlights', () => {
   it('ignores additions once every slot is used', () => {
     const full = new Map([0, 1, 2, 3, 4].map((k) => [k, k]))
     expect(toggleHighlight(full, 99)).toEqual(full)
+  })
+})
+
+describe('linePath', () => {
+  it('lifts the pen over missing values', () => {
+    expect(linePath([1, 2, null, 4], (i) => i * 10, (v) => v)).toBe('M0.0,1.0L10.0,2.0M30.0,4.0')
   })
 })
 

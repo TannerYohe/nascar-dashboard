@@ -184,7 +184,7 @@ export interface SeasonStandings {
   season: number
   series_id: number
   format: PlayoffFormat
-  playoff_field: number | null
+  playoff_field: number
   /** Points races in date order. */
   races: RaceSummary[]
   /** How many of `races` have standings. */

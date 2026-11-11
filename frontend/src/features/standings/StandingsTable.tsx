@@ -2,7 +2,8 @@ import { clsx } from 'clsx'
 import { Fragment } from 'react'
 
 import type { DriverSeason, SeasonStandings } from '../../api/types'
-import { divider, highlightColor, positionChange, type Status, standingsAt, status } from './model'
+import { cleanName } from '../../lib/format'
+import { divider, formatValue, highlightColor, linePath, positionChange, type Status, standingsAt, status } from './model'
 
 interface Props {
   standings: SeasonStandings
@@ -87,7 +88,6 @@ interface RowProps {
 
 function Row({ d, standings: s, race, worst, slot, hovered, onHover, onToggle }: RowProps) {
   const change = positionChange(d, race)
-  const gap = d.gap_to_leader[race]
   const tag = status(s, d, race)
   return (
     <tr
@@ -117,7 +117,7 @@ function Row({ d, standings: s, race, worst, slot, hovered, onHover, onToggle }:
             aria-hidden
           />
           <span className="tabular w-7 shrink-0 text-right text-xs text-faint">#{d.car_number ?? '–'}</span>
-          <span className="truncate font-medium">{d.name}</span>
+          <span className="truncate font-medium">{cleanName(d.name)}</span>
           {d.is_rookie && (
             <span className="rounded border border-line-strong px-1 text-[10px] font-semibold text-muted" title="Rookie">
               R
@@ -126,7 +126,7 @@ function Row({ d, standings: s, race, worst, slot, hovered, onHover, onToggle }:
         </div>
       </td>
       <td className="tabular px-2 text-right font-semibold">{d.points[race]?.toLocaleString() ?? '–'}</td>
-      <td className="tabular px-2 text-right text-muted">{gap ? `−${Math.abs(gap).toLocaleString()}` : gap === 0 ? '—' : '–'}</td>
+      <td className="tabular px-2 text-right text-muted">{formatValue(d.gap_to_leader[race], 'gap')}</td>
       <td className="tabular hidden px-2 text-right text-muted sm:table-cell">{d.earned[race] ?? '–'}</td>
       <td className="tabular px-2 text-right">{d.wins[race] || <span className="text-faint">0</span>}</td>
       <td className="tabular hidden px-2 text-right text-muted md:table-cell">{d.top_5[race] ?? '–'}</td>
@@ -152,16 +152,7 @@ const SPARK_H = 20
 function Sparkline({ positions, total, worst, color }: { positions: (number | null)[]; total: number; worst: number; color: string }) {
   const step = SPARK_W / Math.max(total - 1, 1)
   const y = (p: number) => 2 + ((p - 1) / Math.max(worst - 1, 1)) * (SPARK_H - 4)
-  let d = ''
-  let pen = false
-  positions.forEach((p, i) => {
-    if (p == null) {
-      pen = false
-      return
-    }
-    d += `${pen ? 'L' : 'M'}${(i * step).toFixed(1)},${y(p).toFixed(1)}`
-    pen = true
-  })
+  const d = linePath(positions, (i) => i * step, y)
   return (
     <svg width={SPARK_W} height={SPARK_H} aria-hidden className="block">
       <line x1={0} x2={SPARK_W} y1={y(1)} y2={y(1)} stroke="var(--color-line)" />

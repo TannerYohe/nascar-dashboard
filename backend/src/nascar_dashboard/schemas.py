@@ -174,6 +174,7 @@ class DriverSeason(BaseModel):
     """
 
     driver_id: int
+    # As the feed gives it, markers included.
     name: str
     car_number: int | None
     is_rookie: bool
@@ -193,9 +194,9 @@ class DriverSeason(BaseModel):
 class SeasonStandings(BaseModel):
     season: int
     series_id: int
-    # "elimination" cuts the field each round (through 2025); "chase" resets once (2026 on).
+    # "elimination" cuts the field each round; "chase" resets once.
     format: PlayoffFormat
-    playoff_field: int | None
+    playoff_field: int
     # Points races in date order.
     races: list[RaceSummary]
     # How many of `races` have standings: the standings are as of races[standings_through - 1].

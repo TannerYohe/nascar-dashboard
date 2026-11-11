@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 
 from sqlalchemy import select
@@ -14,14 +13,6 @@ from .races import list_races
 
 # Playoff field size by series, used until the season's first playoff race shows who is in.
 DEFAULT_PLAYOFF_FIELD = {1: 16, 2: 12, 3: 10}
-
-# Feed markers on driver names: "(P)", "(C)", "(i)", a leading "*" and a trailing "#".
-NAME_MARKERS = re.compile(r"\s*\([A-Za-z]\)|^[*#\s]+|[*#\s]+$")
-
-
-def clean_name(first: str | None, last: str | None) -> str:
-    full = f"{first or ''} {last or ''}"
-    return " ".join(NAME_MARKERS.sub("", full).split())
 
 
 def playoff_format(races: list[RaceSummary]) -> PlayoffFormat:
@@ -80,8 +71,8 @@ def _driver(
 
     return DriverSeason(
         driver_id=driver_id,
-        name=clean_name(last.first_name, last.last_name),
-        # Some rows come without a car number; use the latest one the feed gave.
+        name=" ".join(f"{last.first_name or ''} {last.last_name or ''}".split()),
+        # The latest car number the feed gave.
         car_number=next((r.car_number for r in reversed(known) if r.car_number is not None), None),
         is_rookie=any(r.is_rookie for r in known),
         positions=column("points_position"),
@@ -130,7 +121,7 @@ def season_standings(session: Session, year: int, series_id: int) -> SeasonStand
         season=year,
         series_id=series_id,
         format=playoff_format(races),
-        playoff_field=len(seeds) or DEFAULT_PLAYOFF_FIELD.get(series_id),
+        playoff_field=len(seeds) or DEFAULT_PLAYOFF_FIELD[series_id],
         races=races,
         standings_through=through,
         drivers=[_driver(d, snapshots, seeds.get(d)) for d in order],

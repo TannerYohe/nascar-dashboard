@@ -37,10 +37,11 @@ export function longDate(iso: string | null): string {
   })
 }
 
+/** The feed's name markers: "* Connor Zilisch(i)", "Kyle Busch #", "Denny Hamlin (P)". */
+const NAME_MARKERS = /^[*#\s]+|\s*\([A-Za-z]\)|[*#\s]+$/g
+
 export function surname(name: string | null): string {
-  if (!name) return ''
-  // Drop the feed's markers: "* Connor Zilisch(i)", "Kyle Busch #".
-  const clean = name.replace(/^[*#\s]+|\(i\)|[*#]+$/g, '').trim()
+  const clean = cleanName(name)
   const parts = clean.split(/\s+/)
   const suffix = /^(jr\.?|sr\.?|ii|iii|iv)$/i
   const last = parts.length > 1 && suffix.test(parts.at(-1)!) ? parts.at(-2)! : parts.at(-1)!
@@ -48,5 +49,5 @@ export function surname(name: string | null): string {
 }
 
 export function cleanName(name: string | null): string {
-  return (name ?? '').replace(/^[*#\s]+|\(i\)|[*#]+$/g, '').trim()
+  return (name ?? '').replace(NAME_MARKERS, '').replace(/\s+/g, ' ').trim()
 }

@@ -1,13 +1,14 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { DriverSeason, SeasonStandings } from '../../api/types'
-import { shortDate, surname } from '../../lib/format'
+import { cleanName, shortDate, surname } from '../../lib/format'
 import {
   type ChartMode,
   chartValue,
   divider,
   formatValue,
   highlightColor,
+  linePath,
   niceTicks,
   phaseOf,
   phases,
@@ -16,7 +17,7 @@ import {
 
 const HEIGHT = 400
 const M = { top: 28, right: 140, bottom: 28, left: 44 }
-// Below this width, end labels drop their values to leave room for the plot.
+// Below this width, end labels show names only.
 const NARROW = 640
 const NARROW_RIGHT = 84
 const HOVER_REACH = 12
@@ -81,19 +82,7 @@ export function PointsChart({ standings: s, drivers, mode, highlights, hoverId, 
     return { y: (v: number) => M.top + plotH - (v / max) * plotH, ticks: niceTicks(0, max) }
   }, [values, mode, plotH])
 
-  const path = (d: DriverSeason) => {
-    let out = ''
-    let pen = false
-    values.get(d.driver_id)?.forEach((v, i) => {
-      if (v == null) {
-        pen = false
-        return
-      }
-      out += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`
-      pen = true
-    })
-    return out
-  }
+  const path = (d: DriverSeason) => linePath(values.get(d.driver_id) ?? [], x, y)
 
   const nearestDriver = (race: number, py: number) => {
     let best: number | null = null
@@ -110,13 +99,19 @@ export function PointsChart({ standings: s, drivers, mode, highlights, hoverId, 
     return best
   }
 
-  const onPointerMove = (e: React.PointerEvent<SVGRectElement>) => {
+  /** The race and nearest driver line under a pointer or click, in chart coordinates. */
+  const hit = (e: React.MouseEvent<SVGRectElement>) => {
     const box = e.currentTarget.ownerSVGElement!.getBoundingClientRect()
     const px = e.clientX - box.left
     const py = e.clientY - box.top
     const race = Math.min(through - 1, Math.max(0, Math.floor((px - M.left) / step)))
+    return { race, driverId: nearestDriver(race, py), x: px, y: py }
+  }
+
+  const onPointerMove = (e: React.PointerEvent<SVGRectElement>) => {
+    const { race, driverId, x: px, y: py } = hit(e)
     setPointer({ race, x: px, y: py })
-    onHover(nearestDriver(race, py))
+    onHover(driverId)
   }
 
   const onPointerLeave = () => {
@@ -124,9 +119,10 @@ export function PointsChart({ standings: s, drivers, mode, highlights, hoverId, 
     onHover(null)
   }
 
-  const onClick = () => {
-    if (pointer) onSelect(pointer.race)
-    if (hoverId != null) onToggle(hoverId)
+  const onClick = (e: React.MouseEvent<SVGRectElement>) => {
+    const { race, driverId } = hit(e)
+    onSelect(race)
+    if (driverId != null) onToggle(driverId)
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -359,7 +355,7 @@ function Tooltip({ standings: s, race, left, top, width, rows, mode, hoverId }: 
             <li key={d.driver_id} className="flex items-center gap-2">
               <span className="h-0.5 w-3 shrink-0 rounded-full" style={{ background: color }} />
               <span className="tabular w-12 font-semibold text-ink">{formatValue(value, mode)}</span>
-              <span className={d.driver_id === hoverId ? 'truncate text-ink' : 'truncate text-muted'}>{d.name}</span>
+              <span className={d.driver_id === hoverId ? 'truncate text-ink' : 'truncate text-muted'}>{cleanName(d.name)}</span>
             </li>
           ))}
         </ul>

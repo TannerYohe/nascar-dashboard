@@ -74,7 +74,7 @@ export function phaseOf(s: SeasonStandings, i: number): Phase | undefined {
 export function chartValue(s: SeasonStandings, d: DriverSeason, i: number, mode: ChartMode): number | null {
   if (mode === 'position') return d.positions[i] ?? null
   if (mode === 'points') return d.points[i] ?? null
-  // Once the playoffs start, the gap only means something for drivers still in them.
+  // Drivers out of the playoffs have no gap once they start.
   if (s.races[i]?.playoff_round && !d.in_playoffs[i]) return null
   return d.gap_to_leader[i] ?? null
 }
@@ -97,7 +97,7 @@ export function standingsAt(s: SeasonStandings, i: number): DriverSeason[] {
 export function divider(s: SeasonStandings, i: number): Divider | null {
   if (s.races[i]?.playoff_round) {
     if (s.format === 'chase') return { after: fieldAt(s, i), label: 'Chase field' }
-    // In an elimination round, the line that matters is the cut to the next round.
+    // Elimination rounds mark the cut to the next round.
     const all = phases(s)
     const k = all.findIndex((p) => i >= p.start && i <= p.end)
     const next = all[k + 1]
@@ -105,8 +105,8 @@ export function divider(s: SeasonStandings, i: number): Divider | null {
     if (advancing) return { after: advancing, label: `Top ${advancing} advance` }
     return { after: fieldAt(s, i), label: next ? 'Still in the playoffs' : all[k].label }
   }
-  // Before 2026, race winners were locked in, so the top of the points wasn't the cutline.
-  if (s.format === 'chase' && s.playoff_field) return { after: s.playoff_field, label: 'Chase cutline' }
+  // Only the Chase has a regular-season cutline.
+  if (s.format === 'chase') return { after: s.playoff_field, label: 'Chase cutline' }
   return null
 }
 
@@ -128,7 +128,7 @@ export function chartDrivers(s: SeasonStandings, field: ChartField): DriverSeaso
   if (seeded.length) return seeded
   // Before the playoffs, the field plus the drivers just outside it.
   const latest = s.standings_through - 1
-  const reach = (s.playoff_field ?? 16) + 4
+  const reach = s.playoff_field + 4
   return standingsAt(s, latest).slice(0, reach)
 }
 
@@ -148,6 +148,21 @@ export function toggleHighlight(current: Map<number, number>, driverId: number):
   return next
 }
 
+/** An SVG path through the values, broken wherever one is missing. */
+export function linePath(values: (number | null)[], x: (i: number) => number, y: (v: number) => number): string {
+  let out = ''
+  let pen = false
+  values.forEach((v, i) => {
+    if (v == null) {
+      pen = false
+      return
+    }
+    out += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`
+    pen = true
+  })
+  return out
+}
+
 /** Pushes label positions apart so none sit closer than `gap`, staying within [min, max]. */
 export function spreadLabels(ys: number[], gap: number, min: number, max: number): number[] {
   const order = ys.map((y, k) => ({ y, k })).sort((a, b) => a.y - b.y)
@@ -163,7 +178,7 @@ export function spreadLabels(ys: number[], gap: number, min: number, max: number
 export function formatSummary(s: SeasonStandings): string {
   const regular = s.races.filter((r) => !r.playoff_round).length
   const playoff = s.races.length - regular
-  const field = s.playoff_field ?? 16
+  const field = s.playoff_field
   if (s.format === 'chase') {
     const starts = s.drivers.map((d) => d.playoff_start_points).filter((p): p is number => p != null)
     const range = starts.length

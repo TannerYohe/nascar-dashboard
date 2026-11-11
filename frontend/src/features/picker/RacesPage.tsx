@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { useRaces } from '../../api/client'
+import { useSeriesRaces } from '../../api/client'
 import { RaceCard } from './RaceList'
 import { SeasonPicker } from './SeasonPicker'
 import { useSeasonParams } from './useSeasonParams'
@@ -9,7 +9,7 @@ import { useSeasonParams } from './useSeasonParams'
 /** Browse: pick a series and a season, then a race. */
 export function RacesPage() {
   const { year, series, seasons } = useSeasonParams()
-  const races = useRaces({ year, series, enabled: year != null })
+  const races = useSeriesRaces(year, series)
   const [query, setQuery] = useState('')
 
   useEffect(() => {

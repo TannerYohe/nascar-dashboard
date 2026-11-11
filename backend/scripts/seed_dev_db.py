@@ -174,7 +174,7 @@ def seed_race(session: Session, race: RaceInfo) -> None:
 def seed_standings(session: Session, race: RaceInfo) -> None:
     series, race_id = Series(race.series_id), race.race_id
     if points := _try("standings", lambda: LIVE.get_live_points(series, race_id)):
-        # The feed leaves race_id and run_id at 0, so the race comes from the URL (as in cadence).
+        # Stamp each row with its race; the feed leaves race_id at 0.
         _replace(
             session,
             PointsStanding,

@@ -6,7 +6,7 @@ import { Link } from 'react-router'
 import { useStandings } from '../../api/client'
 import type { SeasonStandings } from '../../api/types'
 import { Problem } from '../../components/Problem'
-import { shortDate } from '../../lib/format'
+import { cleanName, shortDate } from '../../lib/format'
 import { seriesName } from '../../lib/racing'
 import { SeasonPicker } from '../picker/SeasonPicker'
 import { useSeasonParams } from '../picker/useSeasonParams'
@@ -176,7 +176,7 @@ function RaceStepper({ standings: s, race, onChange }: { standings: SeasonStandi
           Standings after race {r.round}: {r.race_name}
         </div>
         <div className="truncate text-xs text-muted">
-          {[phase?.label, r.track_name, shortDate(r.race_date), r.winner?.name && `won by ${r.winner.name}`].filter(Boolean).join(' · ')}
+          {[phase?.label, r.track_name, shortDate(r.race_date), r.winner?.name && `won by ${cleanName(r.winner.name)}`].filter(Boolean).join(' · ')}
           {r.has_lap_data && (
             <>
               {' · '}
