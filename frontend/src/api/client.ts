@@ -1,6 +1,6 @@
 import { skipToken, useQuery } from '@tanstack/react-query'
 
-import type { RaceDetail, RaceSummary, ReplayBundle, Season } from './types'
+import type { RaceDetail, RaceSummary, ReplayBundle, Season, SeasonStandings } from './types'
 
 export class ApiError extends Error {
   status: number
@@ -24,6 +24,7 @@ export const api = {
   races: (year?: number, series?: number) => get<RaceSummary[]>('/races', { year, series }),
   race: (raceId: number) => get<RaceDetail>(`/races/${raceId}`),
   replay: (raceId: number) => get<ReplayBundle>(`/races/${raceId}/replay`),
+  standings: (year: number, series: number) => get<SeasonStandings>('/standings', { year, series }),
 }
 
 const HOUR = 60 * 60 * 1000
@@ -64,5 +65,15 @@ export function useReplay(raceId: number) {
     queryKey: ['replay', raceId],
     queryFn: () => api.replay(raceId),
     staleTime: (query) => (query.state.data?.complete ? Infinity : INCOMPLETE_REFETCH),
+  })
+}
+
+/** A season's championship standings; does nothing while `year` is undefined. */
+export function useStandings(year: number | undefined, series: number) {
+  return useQuery({
+    queryKey: ['standings', year, series],
+    queryFn: year == null ? skipToken : () => api.standings(year, series),
+    staleTime: 5 * 60 * 1000,
+    placeholderData: (previous) => previous,
   })
 }
