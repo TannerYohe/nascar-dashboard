@@ -1,30 +1,20 @@
-import { clsx } from 'clsx'
 import { Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useEffect, useState } from 'react'
 
-import { useSeasons, useSeriesRaces } from '../../api/client'
-import { SERIES } from '../../lib/racing'
+import { useSeriesRaces } from '../../api/client'
 import { RaceCard } from './RaceList'
+import { SeasonPicker } from './SeasonPicker'
+import { useSeasonParams } from './useSeasonParams'
 
 /** Browse: pick a series and a season, then a race. */
 export function RacesPage() {
-  const [params, setParams] = useSearchParams()
-  const seasons = useSeasons()
-  const years = useMemo(() => seasons.data?.map((s) => s.year) ?? [], [seasons.data])
-  const year = Number(params.get('year')) || years[0]
-  const series = Number(params.get('series')) || 1
+  const { year, series, seasons } = useSeasonParams()
   const races = useSeriesRaces(year, series)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
     document.title = 'Races · Race Rewind'
   }, [])
-
-  const update = (next: { year?: number; series?: number }) =>
-    setParams({ year: String(next.year ?? year), series: String(next.series ?? series) })
-
-  const seriesInYear = new Set(seasons.data?.find((s) => s.year === year)?.series.map((s) => s.series_id))
 
   const q = query.trim().toLowerCase()
   const list = (races.data ?? []).filter(
@@ -42,38 +32,7 @@ export function RacesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Pick a race</h1>
           <p className="mt-1 text-sm text-muted">Choose a series and season, then open any race to replay it lap by lap.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-line bg-panel p-0.5" role="tablist" aria-label="Series">
-            {SERIES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                role="tab"
-                aria-selected={s.id === series}
-                onClick={() => update({ series: s.id })}
-                disabled={seriesInYear.size > 0 && !seriesInYear.has(s.id)}
-                className={clsx(
-                  'rounded-md px-3 py-1.5 text-sm font-semibold transition disabled:opacity-30',
-                  s.id === series ? 'bg-raised text-ink shadow' : 'text-faint hover:text-muted',
-                )}
-              >
-                {s.short}
-              </button>
-            ))}
-          </div>
-          <select
-            value={year ?? ''}
-            onChange={(e) => update({ year: Number(e.target.value) })}
-            className="h-9 rounded-lg border border-line bg-panel px-3 text-sm font-semibold outline-none"
-            aria-label="Season"
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SeasonPicker />
       </div>
 
       <div className="mt-6 flex items-center gap-2 rounded-lg border border-line bg-panel px-3">

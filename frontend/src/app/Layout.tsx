@@ -2,7 +2,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { clsx } from 'clsx'
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { Fragment, useState } from 'react'
-import { Link, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
+import { Link, NavLink, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
 
 import { useReplayRace, useSeasons, useSeriesRaces } from '../api/client'
 import { CommandPalette } from '../features/picker/CommandPalette'
@@ -11,6 +11,9 @@ import { SERIES, seriesName } from '../lib/racing'
 
 export function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false)
+  // On phones, show the breadcrumb on the replay screen and the page links elsewhere.
+  const onReplay = useMatch('/replay/:raceId') != null
+  const season = useSeasonQuery()
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-bg/80 px-4 backdrop-blur">
@@ -18,8 +21,14 @@ export function Layout() {
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
           <span className="hidden sm:inline">Race Rewind</span>
         </Link>
-        <span className="h-5 w-px bg-line" aria-hidden />
-        <Breadcrumb />
+        <nav className={clsx('items-center gap-1 text-sm', onReplay ? 'hidden sm:flex' : 'flex')} aria-label="Pages">
+          <PageLink to={`/races${season}`}>Races</PageLink>
+          <PageLink to={`/standings${season}`}>Standings</PageLink>
+        </nav>
+        <span className={clsx('h-5 w-px shrink-0 bg-line', !onReplay && 'hidden sm:block')} aria-hidden />
+        <div className={clsx('min-w-0', !onReplay && 'hidden sm:block')}>
+          <Breadcrumb />
+        </div>
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
@@ -40,10 +49,33 @@ export function Layout() {
   )
 }
 
+/** `?year=&series=` for the season being viewed: the replayed race's, or the page's own. */
+function useSeasonQuery(): string {
+  const replay = useMatch('/replay/:raceId')
+  const race = useReplayRace(replay ? Number(replay.params.raceId) : undefined)
+  const [params] = useSearchParams()
+  if (replay && race.data) return `?year=${race.data.season}&series=${race.data.series_id}`
+  return params.get('year') ? `?${params}` : ''
+}
+
+function PageLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        clsx('rounded-md px-2 py-1 font-medium transition hover:bg-raised', isActive ? 'text-ink' : 'text-faint hover:text-muted')
+      }
+    >
+      {children}
+    </NavLink>
+  )
+}
+
 /** Year › Series › Race, each one a popover to change that level. */
 function Breadcrumb() {
   const home = useMatch('/')
   const replay = useMatch('/replay/:raceId')
+  const page = useMatch('/standings') ? '/standings' : '/races'
   const raceId = replay ? Number(replay.params.raceId) : undefined
   const race = useReplayRace(raceId)
   const [params] = useSearchParams()
@@ -60,9 +92,9 @@ function Breadcrumb() {
 
   return (
     <BreadcrumbNav>
-      <YearCrumb year={year} series={series} />
+      <YearCrumb year={year} series={series} page={page} />
       <CrumbSeparator />
-      <SeriesCrumb year={year} series={series} />
+      <SeriesCrumb year={year} series={series} page={page} />
       {current && (
         <>
           <CrumbSeparator />
@@ -146,7 +178,7 @@ function MenuItem({ active, onClick, children, disabled }: { active?: boolean; o
   )
 }
 
-function YearCrumb({ year, series }: { year: number; series: number }) {
+function YearCrumb({ year, series, page }: { year: number; series: number; page: string }) {
   const seasons = useSeasons()
   const navigate = useNavigate()
   return (
@@ -160,7 +192,7 @@ function YearCrumb({ year, series }: { year: number; series: number }) {
               onClick={() => {
                 close()
                 const keep = s.series.some((x) => x.series_id === series) ? series : s.series[0]?.series_id
-                navigate(`/races?year=${s.year}&series=${keep}`)
+                navigate(`${page}?year=${s.year}&series=${keep}`)
               }}
             >
               {s.year}
@@ -173,7 +205,7 @@ function YearCrumb({ year, series }: { year: number; series: number }) {
   )
 }
 
-function SeriesCrumb({ year, series }: { year: number; series: number }) {
+function SeriesCrumb({ year, series, page }: { year: number; series: number; page: string }) {
   const seasons = useSeasons()
   const navigate = useNavigate()
   const available = seasons.data?.find((s) => s.year === year)?.series ?? []
@@ -190,7 +222,7 @@ function SeriesCrumb({ year, series }: { year: number; series: number }) {
                 disabled={!count}
                 onClick={() => {
                   close()
-                  navigate(`/races?year=${year}&series=${s.id}`)
+                  navigate(`${page}?year=${year}&series=${s.id}`)
                 }}
               >
                 {s.name}

@@ -6,6 +6,8 @@ the same nascar-api library, but only the tables the dashboard reads.
     uv run --group seed python scripts/seed_dev_db.py --db dev.db --year 2025 --latest 5
     uv run --group seed python scripts/seed_dev_db.py --db dev.db --year 2025 --race 5551
 
+It also loads the standings after every finished race in the season.
+
 Then start the API with DATABASE_URL=sqlite:///dev.db.
 """
 
@@ -21,7 +23,7 @@ from zoneinfo import ZoneInfo
 
 from nascar_api.enums import Series
 from nascar_api.models import LapData, RaceInfo
-from nascar_api.repos import HistoricNascarRepo
+from nascar_api.repos import HistoricNascarRepo, LiveNascarFeedRepo
 from pydantic import BaseModel
 from requests import HTTPError
 from sqlalchemy import delete
@@ -30,6 +32,7 @@ from sqlalchemy.orm import Session
 from nascar_dashboard.db import sqlite_engine
 from nascar_dashboard.models import (
     Base,
+    PointsStanding,
     Race,
     RaceCautionSegment,
     RaceDriverLapSummary,
@@ -48,6 +51,7 @@ log = logging.getLogger("seed")
 EASTERN = ZoneInfo("America/New_York")
 KNOWN_FLAGS = {1, 2, 3, 4, 5, 8, 9}
 REPO = HistoricNascarRepo()
+LIVE = LiveNascarFeedRepo()
 
 
 def _row(payload: BaseModel, model: type[Base], **extra: Any) -> dict[str, Any]:
@@ -167,6 +171,18 @@ def seed_race(session: Session, race: RaceInfo) -> None:
         )
 
 
+def seed_standings(session: Session, race: RaceInfo) -> None:
+    series, race_id = Series(race.series_id), race.race_id
+    if points := _try("standings", lambda: LIVE.get_live_points(series, race_id)):
+        # Stamp each row with its race; the feed leaves race_id at 0.
+        _replace(
+            session,
+            PointsStanding,
+            race_id,
+            [_row(p, PointsStanding, race_id=race_id, run_id=0) for p in points],
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--db", default="dev.db")
@@ -216,6 +232,11 @@ def main() -> None:
         for race in targets.values():
             seed_race(session, race)
             session.commit()
+
+        log.info("Loading standings for %d finished races", len(finished))
+        for race in finished:
+            seed_standings(session, race)
+        session.commit()
 
 
 if __name__ == "__main__":

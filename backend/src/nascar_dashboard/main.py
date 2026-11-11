@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from .config import get_settings
 from .db import get_session
-from .routes import races, replay
+from .routes import races, replay, standings
 
 
 @get("/health", sync_to_thread=False)
@@ -35,7 +35,7 @@ async def vary_on_accept_encoding(message: Message, scope: Scope) -> None:
 
 def create_app(session_provider: Callable[[], Iterator[Session]] = get_session) -> Litestar:
     """Build the app, opening each request's database session with `session_provider`."""
-    api = Router("/api", route_handlers=[health, races.router, replay.router])
+    api = Router("/api", route_handlers=[health, races.router, replay.router, standings.router])
     return Litestar(
         route_handlers=[api],
         dependencies={"session": Provide(session_provider)},

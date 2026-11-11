@@ -159,3 +159,38 @@ export interface ReplayBundle {
   notes: LapNote[]
   stage_results: StageResult[]
 }
+
+export type PlayoffFormat = 'none' | 'elimination' | 'chase'
+
+/** One driver's standing after each race. Index i is `SeasonStandings.races[i]`. */
+export interface DriverSeason {
+  driver_id: number
+  name: string
+  car_number: number | null
+  is_rookie: boolean
+  positions: (number | null)[]
+  points: (number | null)[]
+  earned: (number | null)[]
+  gap_to_leader: (number | null)[]
+  wins: (number | null)[]
+  top_5: (number | null)[]
+  top_10: (number | null)[]
+  in_playoffs: (boolean | null)[]
+  playoff_seed: number | null
+  playoff_start_points: number | null
+}
+
+export interface SeasonStandings {
+  season: number
+  series_id: number
+  format: PlayoffFormat
+  playoff_field: number
+  /** Points races in date order. */
+  races: RaceSummary[]
+  /** How many of `races` have standings. */
+  standings_through: number
+  /** In the order of the latest standings. */
+  drivers: DriverSeason[]
+  regular_season_champion_id: number | null
+  champion_id: number | null
+}

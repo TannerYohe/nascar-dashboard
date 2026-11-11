@@ -1,6 +1,6 @@
 # Race Rewind
 
-> **Work in progress.** The replay screen is the first page; more are coming.
+> **Work in progress.** The replay screen and championship standings are the first pages; more are coming.
 
 A web app for replaying NASCAR races. Pick a season, series and race, then watch the field run lap by lap on a map of the track, with:
 
@@ -22,19 +22,24 @@ Pit stops are drawn from the pit data. On an in-lap the car runs at its normal p
 
 Penalties come from the official infraction records when present. They're also read out of the lap notes ("#34 penalized for pit road speeding", "#23 serves his stop and go penalty"), since the official records are often empty. A penalty is marked served when a note says so. Otherwise the app infers it: a penalty given under caution is served at the next restart, and one given under green is matched to the car's next stop with no tire change within 5 laps. When nothing matches, the penalty shows as "serving not recorded".
 
+## Championship standings
+
+The standings page charts every driver's championship position, gap to the leader or points after each race of a season, using the standings cadence stores after every race (`points_standing`). The playoff format comes from the schedule: several playoff rounds means the elimination playoffs (through 2025, with a reset and a cut each round), and a single round means the Chase (2026 on, one reset and no eliminations). Seeds are worked out from the first playoff race's points, less what each driver earned in it.
+
 ## Layout
 
 ```
 backend/          Litestar API (Python 3.14, uv)
   src/nascar_dashboard/
     models.py       read-only models of the cadence tables
-    services/       race listings, replay bundle, flag timeline, penalty parsing
-    routes/         /api/seasons, /api/races, /api/races/{id}, /api/races/{id}/replay
+    services/       race listings, replay bundle, flag timeline, penalty parsing, standings
+    routes/         /api/seasons, /api/races, /api/races/{id}, /api/races/{id}/replay, /api/standings
   scripts/seed_dev_db.py   load races from the public NASCAR feed into SQLite
   tests/
 frontend/         React + TypeScript (Vite, Tailwind, TanStack Query, zustand)
   src/features/replay/     replay screen; engine/ is the timing model (unit tested)
   src/features/picker/     race browser and Ctrl-K search
+  src/features/standings/  championship standings across a season
   public/tracks/           track layouts, generated from OpenStreetMap
 scripts/tracks/   builds the track layouts (tracks.toml + build_tracks.py)
 ```

@@ -27,6 +27,15 @@
   --color-best-personal: #4ade80;
 }
 
+/* Highlighted driver colors on the standings chart, in slot order. */
+:root {
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-series-3: #199e70;
+  --color-series-4: #c98500;
+  --color-series-5: #d55181;
+}
+
 html,
 body,
 #root {
