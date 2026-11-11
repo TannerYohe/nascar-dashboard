@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import { Crown, Flag, Trophy } from 'lucide-react'
 
 import type { DriverSeason, SeasonStandings } from '../../api/types'
@@ -43,7 +44,7 @@ export function SummaryTiles({ standings: s }: { standings: SeasonStandings }) {
   const winners = order.filter((d) => (d.wins[latest] ?? 0) === mostWins)
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className={clsx('grid grid-cols-2 gap-3', s.format === 'none' ? 'lg:grid-cols-3' : 'lg:grid-cols-4')}>
       <Tile
         icon={<Trophy size={13} className={champion ? 'text-accent' : undefined} />}
         label={champion ? `${s.season} champion` : 'Points leader'}
@@ -54,12 +55,14 @@ export function SummaryTiles({ standings: s }: { standings: SeasonStandings }) {
             : ''
         }
       />
-      <Tile
-        icon={<Crown size={13} />}
-        label={s.regular_season_champion_id != null ? 'Regular season champion' : 'Regular season leader'}
-        title={regular ? cleanName(regular.name) : '–'}
-        detail={regular ? `${regular.points[regularAt]?.toLocaleString()} pts · ${plural(regular.wins[regularAt] ?? 0, 'win')}` : ''}
-      />
+      {s.format !== 'none' && (
+        <Tile
+          icon={<Crown size={13} />}
+          label={s.regular_season_champion_id != null ? 'Regular season champion' : 'Regular season leader'}
+          title={regular ? cleanName(regular.name) : '–'}
+          detail={regular ? `${regular.points[regularAt]?.toLocaleString()} pts · ${plural(regular.wins[regularAt] ?? 0, 'win')}` : ''}
+        />
+      )}
       <Tile
         icon={<Flag size={13} />}
         label="Most wins"
