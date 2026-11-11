@@ -1,7 +1,7 @@
 import * as Popover from '@radix-ui/react-popover'
 import { clsx } from 'clsx'
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Link, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
 
 import { useRaces, useReplayRace, useSeasons } from '../api/client'
@@ -42,16 +42,21 @@ export function Layout() {
 
 /** Year › Series › Race, each one a popover to change that level. */
 function Breadcrumb() {
+  const home = useMatch('/')
   const replay = useMatch('/replay/:raceId')
   const raceId = replay ? Number(replay.params.raceId) : undefined
   const race = useReplayRace(raceId)
   const [params] = useSearchParams()
   const seasons = useSeasons()
 
+  // "/" is about to open a replay, so it shows the same placeholder as a loading replay.
+  const racePending = home ? !seasons.isError : raceId != null && race.isPending
+  if (racePending) return <BreadcrumbPlaceholder crumbs={3} />
+
   const current = raceId ? race.data : undefined
   const year = current?.season ?? (Number(params.get('year')) || seasons.data?.[0]?.year)
   const series = current?.series_id ?? (Number(params.get('series')) || 1)
-  if (!year) return null
+  if (!year) return seasons.isPending ? <BreadcrumbPlaceholder crumbs={2} /> : null
 
   return (
     <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb">
@@ -64,6 +69,22 @@ function Breadcrumb() {
           <RaceCrumb year={year} series={series} raceId={current.race_id} name={current.race_name ?? 'Race'} />
         </>
       )}
+    </nav>
+  )
+}
+
+const PLACEHOLDER_WIDTHS = ['w-10', 'w-24', 'w-48']
+
+/** Pulsing stand-ins for the first `crumbs` crumbs while the data behind them loads. */
+function BreadcrumbPlaceholder({ crumbs }: { crumbs: number }) {
+  return (
+    <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb" aria-busy>
+      {PLACEHOLDER_WIDTHS.slice(0, crumbs).map((width, i) => (
+        <Fragment key={width}>
+          {i > 0 && <ChevronRight size={14} className="shrink-0 text-faint" />}
+          <span className={clsx('mx-2 h-4 min-w-0 shrink animate-pulse rounded bg-hover', width)} />
+        </Fragment>
+      ))}
     </nav>
   )
 }
