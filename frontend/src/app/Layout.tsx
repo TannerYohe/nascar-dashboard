@@ -59,18 +59,30 @@ function Breadcrumb() {
   if (!year) return seasons.isPending ? <BreadcrumbPlaceholder crumbs={2} /> : null
 
   return (
-    <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb">
+    <BreadcrumbNav>
       <YearCrumb year={year} series={series} />
-      <ChevronRight size={14} className="shrink-0 text-faint" />
+      <CrumbSeparator />
       <SeriesCrumb year={year} series={series} />
       {current && (
         <>
-          <ChevronRight size={14} className="shrink-0 text-faint" />
+          <CrumbSeparator />
           <RaceCrumb year={year} series={series} raceId={current.race_id} name={current.race_name ?? 'Race'} />
         </>
       )}
+    </BreadcrumbNav>
+  )
+}
+
+function BreadcrumbNav({ busy, children }: { busy?: boolean; children: React.ReactNode }) {
+  return (
+    <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb" aria-busy={busy}>
+      {children}
     </nav>
   )
+}
+
+function CrumbSeparator() {
+  return <ChevronRight size={14} className="shrink-0 text-faint" />
 }
 
 const PLACEHOLDER_WIDTHS = ['w-10', 'w-24', 'w-48']
@@ -78,14 +90,14 @@ const PLACEHOLDER_WIDTHS = ['w-10', 'w-24', 'w-48']
 /** Pulsing stand-ins for the first `crumbs` crumbs while the data behind them loads. */
 function BreadcrumbPlaceholder({ crumbs }: { crumbs: number }) {
   return (
-    <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="Breadcrumb" aria-busy>
+    <BreadcrumbNav busy>
       {PLACEHOLDER_WIDTHS.slice(0, crumbs).map((width, i) => (
         <Fragment key={width}>
-          {i > 0 && <ChevronRight size={14} className="shrink-0 text-faint" />}
+          {i > 0 && <CrumbSeparator />}
           <span className={clsx('mx-2 h-4 min-w-0 shrink animate-pulse rounded bg-hover', width)} />
         </Fragment>
       ))}
-    </nav>
+    </BreadcrumbNav>
   )
 }
 
