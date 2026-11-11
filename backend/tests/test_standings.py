@@ -49,7 +49,8 @@ def season(db: sessionmaker[Session]) -> None:
                         driver_id=driver_id,
                         first_name=first,
                         last_name=last,
-                        car_number=driver_id * 11,
+                        # Charlie's last row has no car number.
+                        car_number=None if (race_id, driver_id) == (304, 3) else driver_id * 11,
                         points=points,
                         points_position=position,
                         points_earned_this_race=earned,
@@ -90,6 +91,7 @@ def test_season_standings(client: TestClient) -> None:
     assert alpha["in_playoffs"] == [False, False, True, True]
     assert bravo["is_rookie"] and not alpha["is_rookie"]
     assert charlie["playoff_seed"] is None
+    assert charlie["car_number"] == 33
 
 
 @pytest.mark.usefixtures("season")
