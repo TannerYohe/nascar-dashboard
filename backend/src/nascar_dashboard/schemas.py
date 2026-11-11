@@ -164,6 +164,48 @@ class StageResult(BaseModel):
     points: int | None
 
 
+PlayoffFormat = Literal["none", "elimination", "chase"]
+
+
+class DriverSeason(BaseModel):
+    """One driver's championship standing after each race. Index i is `SeasonStandings.races[i]`.
+
+    Every list is None from the first race the driver has no standing for.
+    """
+
+    driver_id: int
+    name: str
+    car_number: int | None
+    is_rookie: bool
+    positions: list[int | None]
+    points: list[int | None]
+    earned: list[int | None]
+    gap_to_leader: list[int | None]
+    wins: list[int | None]
+    top_5: list[int | None]
+    top_10: list[int | None]
+    in_playoffs: list[bool | None]
+    # Order on points once the playoff reset is applied, before the first playoff race.
+    playoff_seed: int | None
+    playoff_start_points: int | None
+
+
+class SeasonStandings(BaseModel):
+    season: int
+    series_id: int
+    # "elimination" cuts the field each round (through 2025); "chase" resets once (2026 on).
+    format: PlayoffFormat
+    playoff_field: int | None
+    # Points races in date order.
+    races: list[RaceSummary]
+    # How many of `races` have standings: the standings are as of races[standings_through - 1].
+    standings_through: int
+    # Drivers in the order of the latest standings.
+    drivers: list[DriverSeason]
+    regular_season_champion_id: int | None
+    champion_id: int | None
+
+
 class ReplayBundle(BaseModel):
     race: RaceDetail
     finished: bool
