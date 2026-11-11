@@ -8,6 +8,7 @@ import {
   divider,
   formatValue,
   highlightColor,
+  linePath,
   niceTicks,
   phaseOf,
   phases,
@@ -81,19 +82,7 @@ export function PointsChart({ standings: s, drivers, mode, highlights, hoverId, 
     return { y: (v: number) => M.top + plotH - (v / max) * plotH, ticks: niceTicks(0, max) }
   }, [values, mode, plotH])
 
-  const path = (d: DriverSeason) => {
-    let out = ''
-    let pen = false
-    values.get(d.driver_id)?.forEach((v, i) => {
-      if (v == null) {
-        pen = false
-        return
-      }
-      out += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`
-      pen = true
-    })
-    return out
-  }
+  const path = (d: DriverSeason) => linePath(values.get(d.driver_id) ?? [], x, y)
 
   const nearestDriver = (race: number, py: number) => {
     let best: number | null = null

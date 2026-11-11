@@ -148,6 +148,21 @@ export function toggleHighlight(current: Map<number, number>, driverId: number):
   return next
 }
 
+/** An SVG path through the values, broken wherever one is missing. */
+export function linePath(values: (number | null)[], x: (i: number) => number, y: (v: number) => number): string {
+  let out = ''
+  let pen = false
+  values.forEach((v, i) => {
+    if (v == null) {
+      pen = false
+      return
+    }
+    out += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`
+    pen = true
+  })
+  return out
+}
+
 /** Pushes label positions apart so none sit closer than `gap`, staying within [min, max]. */
 export function spreadLabels(ys: number[], gap: number, min: number, max: number): number[] {
   const order = ys.map((y, k) => ({ y, k })).sort((a, b) => a.y - b.y)
