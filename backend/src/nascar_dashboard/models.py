@@ -197,6 +197,30 @@ class RaceInfraction(Base):
     penalty: Mapped[str | None]
 
 
+class PointsStanding(Base):
+    """Championship standings as they stood after a race."""
+
+    __tablename__ = "points_standing"
+
+    race_id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(primary_key=True)
+    driver_id: Mapped[int] = mapped_column(primary_key=True)
+    # The feed marks names with "(P)"/"(C)" for playoff drivers, "#" for rookies and so on.
+    first_name: Mapped[str | None]
+    last_name: Mapped[str | None]
+    car_number: Mapped[int | None]
+    points: Mapped[int | None]
+    points_position: Mapped[int | None]
+    points_earned_this_race: Mapped[int | None]
+    delta_leader: Mapped[int | None]
+    wins: Mapped[int | None]
+    top_5: Mapped[int | None]
+    top_10: Mapped[int | None]
+    is_in_chase: Mapped[bool | None]
+    is_points_eligible: Mapped[bool | None]
+    is_rookie: Mapped[bool | None]
+
+
 class RaceStageResult(Base):
     __tablename__ = "race_stage_result"
 
