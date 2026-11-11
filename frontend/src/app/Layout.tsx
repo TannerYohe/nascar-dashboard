@@ -49,7 +49,7 @@ function Breadcrumb() {
   const [params] = useSearchParams()
   const seasons = useSeasons()
 
-  // "/" is about to open a replay, so it shows the same placeholder as a loading replay.
+  // Shows three placeholder crumbs on "/" and while the replay loads.
   const racePending = home ? !seasons.isError : raceId != null && race.isPending
   if (racePending) return <BreadcrumbPlaceholder crumbs={3} />
 
