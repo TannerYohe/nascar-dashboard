@@ -110,13 +110,19 @@ export function PointsChart({ standings: s, drivers, mode, highlights, hoverId, 
     return best
   }
 
-  const onPointerMove = (e: React.PointerEvent<SVGRectElement>) => {
+  /** The race and nearest driver line under a pointer or click, in chart coordinates. */
+  const hit = (e: React.MouseEvent<SVGRectElement>) => {
     const box = e.currentTarget.ownerSVGElement!.getBoundingClientRect()
     const px = e.clientX - box.left
     const py = e.clientY - box.top
     const race = Math.min(through - 1, Math.max(0, Math.floor((px - M.left) / step)))
+    return { race, driverId: nearestDriver(race, py), x: px, y: py }
+  }
+
+  const onPointerMove = (e: React.PointerEvent<SVGRectElement>) => {
+    const { race, driverId, x: px, y: py } = hit(e)
     setPointer({ race, x: px, y: py })
-    onHover(nearestDriver(race, py))
+    onHover(driverId)
   }
 
   const onPointerLeave = () => {
@@ -124,9 +130,10 @@ export function PointsChart({ standings: s, drivers, mode, highlights, hoverId, 
     onHover(null)
   }
 
-  const onClick = () => {
-    if (pointer) onSelect(pointer.race)
-    if (hoverId != null) onToggle(hoverId)
+  const onClick = (e: React.MouseEvent<SVGRectElement>) => {
+    const { race, driverId } = hit(e)
+    onSelect(race)
+    if (driverId != null) onToggle(driverId)
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
