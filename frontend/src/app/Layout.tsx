@@ -172,7 +172,9 @@ function SeriesCrumb({ year, series }: { year: number; series: number }) {
 }
 
 function RaceCrumb({ year, series, raceId, name }: { year: number; series: number; raceId: number; name: string }) {
-  const races = useRaces({ year, series })
+  // Filters the season listing, which the home page has usually fetched already.
+  const season = useRaces({ year })
+  const races = season.data?.filter((r) => r.series_id === series)
   return (
     <Crumb label={name} wide>
       {(close) => (
@@ -180,7 +182,7 @@ function RaceCrumb({ year, series, raceId, name }: { year: number; series: numbe
           <div className="border-b border-line px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-faint">
             {year} {seriesName(series)}
           </div>
-          {races.data ? <RaceRows races={races.data} currentId={raceId} onPick={close} /> : <div className="p-4 text-xs text-faint">Loading…</div>}
+          {races ? <RaceRows races={races} currentId={raceId} onPick={close} /> : <div className="p-4 text-xs text-faint">Loading…</div>}
         </>
       )}
     </Crumb>

@@ -37,13 +37,16 @@ interface RacesOptions {
   enabled?: boolean
 }
 
-export function useRaces({ year, series, enabled = true }: RacesOptions = {}) {
-  return useQuery({
+export function racesQuery(year?: number, series?: number) {
+  return queryOptions({
     queryKey: ['races', year ?? 'all', series ?? 'all'],
     queryFn: () => api.races(year, series),
     staleTime: 5 * 60 * 1000,
-    enabled,
   })
+}
+
+export function useRaces({ year, series, enabled = true }: RacesOptions = {}) {
+  return useQuery({ ...racesQuery(year, series), enabled })
 }
 
 /** How long a bundle that's still filling in stays fresh before reopening the race fetches it again. */
