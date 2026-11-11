@@ -39,7 +39,7 @@ function Replay({ bundle }: { bundle: ReplayBundle }) {
     const start = startT > 0 ? startT : startLap > 1 ? lapSeekTime(model, startLap) : 0
     useReplayStore.getState().reset(model.duration, start)
     const stop = startClockLoop()
-    document.title = `${bundle.race.race_name ?? 'Race'} · Race Rewind`
+    document.title = `${bundle.race.race_name ?? 'Race'} · NasDash`
     return () => {
       stop()
       useReplayStore.getState().pause()

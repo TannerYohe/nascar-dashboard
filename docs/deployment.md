@@ -1,6 +1,6 @@
 # Deployment
 
-Race Rewind runs on AWS in `us-east-2`, next to the Aurora DSQL cluster that
+NasDash runs on AWS in `us-east-2`, next to the Aurora DSQL cluster that
 cadence loads. Every merge to `master` releases and deploys a new version. It's
 served at https://nascardash.com, and also at `www.nascardash.com`, `nasdash.com`
 and `www.nasdash.com`.

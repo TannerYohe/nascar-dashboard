@@ -129,7 +129,7 @@ jobs:
           DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           {
-            echo "### Race Rewind release"
+            echo "### NasDash release"
             echo
             echo "| | |"
             echo "|---|---|"

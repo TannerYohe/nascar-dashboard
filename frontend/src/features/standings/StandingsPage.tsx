@@ -39,7 +39,7 @@ export function StandingsPage() {
   const standings = useStandings(year, series)
 
   useEffect(() => {
-    document.title = 'Standings · Race Rewind'
+    document.title = 'Standings · NasDash'
   }, [])
 
   const error = seasons.error ?? standings.error

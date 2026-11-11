@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Race Rewind: the API on Lambda behind a function URL, and the UI on S3, both
+  NasDash: the API on Lambda behind a function URL, and the UI on S3, both
   served through one CloudFront distribution. Deployed by infra/deploy.sh.
 
 Parameters:
@@ -56,7 +56,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: nascar-dashboard-api
-      Description: Race Rewind API (Litestar via Lambda Web Adapter)
+      Description: NasDash API (Litestar via Lambda Web Adapter)
       PackageType: Image
       Code:
         ImageUri: !Ref ImageUri
@@ -177,7 +177,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-        Comment: Race Rewind
+        Comment: NasDash
         Enabled: true
         HttpVersion: http2and3
         IPV6Enabled: true

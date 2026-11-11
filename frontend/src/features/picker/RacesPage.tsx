@@ -13,7 +13,7 @@ export function RacesPage() {
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    document.title = 'Races · Race Rewind'
+    document.title = 'Races · NasDash'
   }, [])
 
   const q = query.trim().toLowerCase()

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Race Rewind custom domains: a Route 53 hosted zone for each domain and the
+  NasDash custom domains: a Route 53 hosted zone for each domain and the
   CloudFront certificate covering them. Deployed by hand in us-east-1, the only
   region CloudFront takes certificates from.
 
