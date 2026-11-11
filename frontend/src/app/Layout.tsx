@@ -20,7 +20,7 @@ export function Layout() {
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-bg/80 px-4 backdrop-blur">
         <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight">
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
-          <span className="hidden sm:inline">{APP_NAME}</span>
+          <span className="sr-only sm:not-sr-only">{APP_NAME}</span>
         </Link>
         <nav className={clsx('items-center gap-1 text-sm', onReplay ? 'hidden sm:flex' : 'flex')} aria-label="Pages">
           <PageLink to={`/races${season}`}>Races</PageLink>
