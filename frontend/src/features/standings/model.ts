@@ -74,7 +74,7 @@ export function phaseOf(s: SeasonStandings, i: number): Phase | undefined {
 export function chartValue(s: SeasonStandings, d: DriverSeason, i: number, mode: ChartMode): number | null {
   if (mode === 'position') return d.positions[i] ?? null
   if (mode === 'points') return d.points[i] ?? null
-  // Once the playoffs start, the gap only means something for drivers still in them.
+  // Drivers out of the playoffs have no gap once they start.
   if (s.races[i]?.playoff_round && !d.in_playoffs[i]) return null
   return d.gap_to_leader[i] ?? null
 }
@@ -97,7 +97,7 @@ export function standingsAt(s: SeasonStandings, i: number): DriverSeason[] {
 export function divider(s: SeasonStandings, i: number): Divider | null {
   if (s.races[i]?.playoff_round) {
     if (s.format === 'chase') return { after: fieldAt(s, i), label: 'Chase field' }
-    // In an elimination round, the line that matters is the cut to the next round.
+    // Elimination rounds mark the cut to the next round.
     const all = phases(s)
     const k = all.findIndex((p) => i >= p.start && i <= p.end)
     const next = all[k + 1]
@@ -105,7 +105,7 @@ export function divider(s: SeasonStandings, i: number): Divider | null {
     if (advancing) return { after: advancing, label: `Top ${advancing} advance` }
     return { after: fieldAt(s, i), label: next ? 'Still in the playoffs' : all[k].label }
   }
-  // Before 2026, race winners were locked in, so the top of the points wasn't the cutline.
+  // Only the Chase has a regular-season cutline.
   if (s.format === 'chase') return { after: s.playoff_field, label: 'Chase cutline' }
   return null
 }

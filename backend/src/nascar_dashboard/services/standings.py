@@ -72,7 +72,7 @@ def _driver(
     return DriverSeason(
         driver_id=driver_id,
         name=" ".join(f"{last.first_name or ''} {last.last_name or ''}".split()),
-        # Some rows come without a car number; use the latest one the feed gave.
+        # The latest car number the feed gave.
         car_number=next((r.car_number for r in reversed(known) if r.car_number is not None), None),
         is_rookie=any(r.is_rookie for r in known),
         positions=column("points_position"),

@@ -194,7 +194,7 @@ class DriverSeason(BaseModel):
 class SeasonStandings(BaseModel):
     season: int
     series_id: int
-    # "elimination" cuts the field each round (through 2025); "chase" resets once (2026 on).
+    # "elimination" cuts the field each round; "chase" resets once.
     format: PlayoffFormat
     playoff_field: int
     # Points races in date order.

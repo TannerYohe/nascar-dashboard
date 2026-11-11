@@ -11,8 +11,7 @@ import { SERIES, seriesName } from '../lib/racing'
 
 export function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false)
-  // On phones there's room for the page links or the breadcrumb, not both. The replay screen needs its breadcrumb;
-  // the other pages have their own season picker.
+  // On phones, show the breadcrumb on the replay screen and the page links elsewhere.
   const onReplay = useMatch('/replay/:raceId') != null
   const season = useSeasonQuery()
   return (

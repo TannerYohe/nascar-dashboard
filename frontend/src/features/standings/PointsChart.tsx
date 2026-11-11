@@ -17,7 +17,7 @@ import {
 
 const HEIGHT = 400
 const M = { top: 28, right: 140, bottom: 28, left: 44 }
-// Below this width, end labels drop their values to leave room for the plot.
+// Below this width, end labels show names only.
 const NARROW = 640
 const NARROW_RIGHT = 84
 const HOVER_REACH = 12
