@@ -1,7 +1,9 @@
 # Deployment
 
 Race Rewind runs on AWS in `us-east-2`, next to the Aurora DSQL cluster that
-cadence loads. Every merge to `master` releases and deploys a new version.
+cadence loads. Every merge to `master` releases and deploys a new version. It's
+served at https://nascardash.com, and also at `www.nascardash.com`, `nasdash.com`
+and `www.nasdash.com`.
 
 ## Architecture
 
@@ -28,6 +30,10 @@ cadence loads. Every merge to `master` releases and deploys a new version.
   read-only `dashboard_reader` Postgres role. There's no VPC: DSQL has a public
   endpoint with IAM auth, so there's no NAT gateway to pay for.
 
+- **Domains:** both domains are registered at Squarespace, with their DNS in
+  Route 53. Each zone has alias records sending the bare domain and `www` to the
+  distribution. One ACM certificate in `us-east-1` covers all four names.
+
 UI and API share one origin, so the browser never makes a cross-origin request
 and CORS isn't involved.
 
@@ -43,6 +49,8 @@ At portfolio traffic it should all fit in the AWS free tier:
 | ECR | 500 MB (first 12 months) | the lifecycle policy keeps 5 images, about $0.05/month after that |
 | CloudWatch Logs | 5 GB ingest | 14-day retention |
 | Aurora DSQL | 100,000 DPUs, 1 GB storage | shared with cadence |
+| Route 53 | none | $0.50/month per hosted zone, so $1/month; queries for alias records to CloudFront are free |
+| ACM | public certificates are free | |
 
 The account's Lambda concurrency limit (10 in a new account) also limits how
 far a traffic spike can run up the bill.
@@ -52,12 +60,14 @@ far a traffic spike can run up the bill.
 | Stack | Template | Deployed by | Holds |
 |---|---|---|---|
 | `nascar-dashboard-bootstrap` | `infra/bootstrap.yaml` | you, by hand, rarely | ECR repository, site bucket, the API's IAM role, the CloudFormation and GitHub deploy roles |
-| `nascar-dashboard` | `infra/app.yaml` | every release (`infra/deploy.sh`) | Lambda function and URL, CloudFront distribution and its policies, bucket policy |
+| `nascar-dashboard-domains` (`us-east-1`) | `infra/domains.yaml` | you, by hand, rarely | a Route 53 hosted zone per domain, the CloudFront certificate |
+| `nascar-dashboard` | `infra/app.yaml` | every release (`infra/deploy.sh`) | Lambda function and URL, CloudFront distribution and its policies, bucket policy, the domains' alias records |
 
 The bootstrap stack holds what has to exist before the first deploy, plus the
-IAM roles, so a release can't widen its own permissions. A change to
+IAM roles, so a release can't widen its own permissions. The domains stack is in
+`us-east-1` because CloudFront only takes certificates from there. A change to
 `infra/app.yaml` is applied by the next release. A change to
-`infra/bootstrap.yaml` has to be deployed by hand (below).
+`infra/bootstrap.yaml` or `infra/domains.yaml` has to be deployed by hand (below).
 
 ## Releases
 
@@ -76,7 +86,8 @@ IAM roles, so a release can't widen its own permissions. A change to
    tagged with the version.
 4. Builds the UI and runs `infra/deploy.sh` with the image digest: it updates the
    `nascar-dashboard` stack, uploads the UI, and invalidates the CloudFront cache.
-5. Checks that `/api/health`, `/api/seasons` and `/` respond, then publishes a
+5. Checks that `/api/health` and `/api/seasons` respond on https://nascardash.com
+   and `/` on nascardash.com, nasdash.com and both `www` names, then publishes a
    GitHub Release with generated notes. `/api/seasons` reads the database, so
    this also checks the API's DSQL access.
 
@@ -112,6 +123,20 @@ AWS_REGION=us-east-2 infra/deploy.sh <account>.dkr.ecr.us-east-2.amazonaws.com/n
 ECR keeps only the 5 newest images, so only the last 5 releases can be
 redeployed this way. For anything older, revert on `master`.
 
+Versions released before the custom domains have an `infra/app.yaml` without
+them. Deploying one removes the domains from the distribution and deletes their
+DNS records, taking nascardash.com and nasdash.com offline, and its smoke test
+only checks the `cloudfront.net` address, so nothing flags it. For those
+versions, revert on `master`, or check out only the UI from the tag and deploy
+with the current `infra/`:
+
+```sh
+git checkout --no-overlay v2026.11.2 -- frontend
+(cd frontend && npm ci && npm run build)
+AWS_REGION=us-east-2 infra/deploy.sh <account>.dkr.ecr.us-east-2.amazonaws.com/nascar-dashboard-api@sha256:...
+git checkout --no-overlay HEAD -- frontend
+```
+
 ## One-time setup
 
 This is already done for the current account. It's here for rebuilding.
@@ -127,7 +152,46 @@ aws cloudformation deploy --region us-east-2 \
   --parameter-overrides DsqlClusterId=<cluster-id>
 ```
 
-**2. DSQL role.** The `nascar` schema is owned by `admin`, and its tables by
+**2. Domains stack.** Deploy it, then point the registrar at its name servers.
+If you change the domains, pass the same `PrimaryDomain` and `SecondaryDomain`
+to the bootstrap stack, since its deploy role may only write those names'
+records.
+
+```sh
+aws cloudformation deploy --region us-east-1 \
+  --stack-name nascar-dashboard-domains \
+  --template-file infra/domains.yaml
+```
+
+The deploy creates both hosted zones, then waits until ACM issues the
+certificate, which can only happen once the domains use the zones. While it
+waits, for each domain in Squarespace (Domains → the domain → DNS):
+
+1. Turn off DNSSEC. Route 53 doesn't sign these zones, so a DS record left at
+   the registry makes every lookup fail.
+2. Under name servers, switch to custom name servers and enter the four the
+   zone lists. The stack has no outputs until it finishes, so read the zone id
+   from its resource (`PrimaryHostedZone` for nascardash.com,
+   `SecondaryHostedZone` for nasdash.com):
+
+   ```sh
+   ZONE_ID=$(aws cloudformation describe-stack-resource --region us-east-1 \
+     --stack-name nascar-dashboard-domains --logical-resource-id PrimaryHostedZone \
+     --query StackResourceDetail.PhysicalResourceId --output text)
+   aws route53 get-hosted-zone --id "$ZONE_ID" --query "DelegationSet.NameServers"
+   ```
+
+The certificate is usually issued within an hour of the switch. The app stack
+can't be deployed before then, since CloudFront needs it. `cloudformation deploy`
+stops waiting after about an hour and exits with an error, but the stack keeps
+going. Check on it with:
+
+```sh
+aws cloudformation describe-stacks --region us-east-1 \
+  --stack-name nascar-dashboard-domains --query "Stacks[0].StackStatus"
+```
+
+**3. DSQL role.** The `nascar` schema is owned by `admin`, and its tables by
 `cadence_writer`, so the grants come from both:
 
 ```sql
@@ -145,7 +209,7 @@ The default privileges make tables cadence adds later readable too. To run the
 API locally against DSQL as `dashboard_reader`, also
 `AWS IAM GRANT dashboard_reader TO '<your role ARN>'`.
 
-**3. GitHub.** Create a `production` environment, limited to the `master` branch,
+**4. GitHub.** Create a `production` environment, limited to the `master` branch,
 with these variables:
 
 | Variable | Value |
