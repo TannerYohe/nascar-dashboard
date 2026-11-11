@@ -14,6 +14,7 @@ export function Layout() {
   // On phones there's room for the page links or the breadcrumb, not both. The replay screen needs its breadcrumb;
   // the other pages have their own season picker.
   const onReplay = useMatch('/replay/:raceId') != null
+  const season = useSeasonQuery()
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-bg/80 px-4 backdrop-blur">
@@ -22,8 +23,8 @@ export function Layout() {
           <span className="hidden sm:inline">Race Rewind</span>
         </Link>
         <nav className={clsx('items-center gap-1 text-sm', onReplay ? 'hidden sm:flex' : 'flex')} aria-label="Pages">
-          <PageLink to="/races">Races</PageLink>
-          <PageLink to="/standings">Standings</PageLink>
+          <PageLink to={`/races${season}`}>Races</PageLink>
+          <PageLink to={`/standings${season}`}>Standings</PageLink>
         </nav>
         <span className={clsx('h-5 w-px shrink-0 bg-line', !onReplay && 'hidden sm:block')} aria-hidden />
         <div className={clsx('min-w-0', !onReplay && 'hidden sm:block')}>
@@ -49,12 +50,19 @@ export function Layout() {
   )
 }
 
-function PageLink({ to, children }: { to: string; children: React.ReactNode }) {
+/** `?year=&series=` for the season being viewed: the replayed race's, or the page's own. */
+function useSeasonQuery(): string {
+  const replay = useMatch('/replay/:raceId')
+  const race = useRace(replay ? Number(replay.params.raceId) : undefined)
   const [params] = useSearchParams()
-  const season = params.get('year') ? `?${params}` : ''
+  if (replay && race.data) return `?year=${race.data.season}&series=${race.data.series_id}`
+  return params.get('year') ? `?${params}` : ''
+}
+
+function PageLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <NavLink
-      to={`${to}${season}`}
+      to={to}
       className={({ isActive }) =>
         clsx('rounded-md px-2 py-1 font-medium transition hover:bg-raised', isActive ? 'text-ink' : 'text-faint hover:text-muted')
       }
