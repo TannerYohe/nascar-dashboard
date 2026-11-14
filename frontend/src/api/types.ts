@@ -194,3 +194,173 @@ export interface SeasonStandings {
   regular_season_champion_id: number | null
   champion_id: number | null
 }
+
+/** Results across a set of points-race starts. */
+export interface StatRecord {
+  starts: number
+  wins: number
+  /** Top 3 finishes. */
+  podiums: number
+  top_5: number
+  top_10: number
+  poles: number
+  pole_wins: number
+  laps_led: number
+  laps_completed: number
+  /** Starts in which the car led at least one lap. */
+  races_led: number
+  dnfs: number
+  crashes: number
+  avg_start: number | null
+  avg_finish: number | null
+  /** Starting position of the win that came from furthest back. */
+  deepest_win_start: number | null
+}
+
+export interface FastLap {
+  speed_mph: number
+  lap: number
+  race_id: number
+  race_name: string | null
+  season: number
+  track_name: string | null
+  driver_id: number
+  driver_name: string | null
+}
+
+export interface ChampionshipFinish {
+  season: number
+  position: number
+  driver_id: number
+  driver_name: string | null
+}
+
+export interface SeasonRecord {
+  season: number
+  record: StatRecord
+  championship: ChampionshipFinish | null
+  teams: string[]
+}
+
+export interface DriverRecord {
+  driver_id: number
+  name: string | null
+  record: StatRecord
+}
+
+export interface TeamRecord {
+  slug: string
+  name: string
+  record: StatRecord
+}
+
+export interface TrackRecord {
+  track_id: number
+  name: string | null
+  record: StatRecord
+}
+
+export interface Coverage {
+  series_id: number
+  /** The earliest season with results in the series. */
+  data_since: number | null
+}
+
+export interface DriverSummary extends DriverRecord {
+  first_season: number
+  last_season: number
+  team: string | null
+}
+
+export interface DriverList extends Coverage {
+  drivers: DriverSummary[]
+}
+
+export interface DriverProfile extends Coverage {
+  driver_id: number
+  name: string | null
+  /** The team of the driver's most recent start. */
+  team: string | null
+  series_ids: number[]
+  first_season: number
+  last_season: number
+  record: StatRecord
+  championships: ChampionshipFinish[]
+  best_championship: ChampionshipFinish | null
+  stage_wins: number
+  fastest_lap: FastLap | null
+  seasons: SeasonRecord[]
+  teams: TeamRecord[]
+  tracks: TrackRecord[]
+}
+
+export interface TeamSummary extends TeamRecord {
+  first_season: number
+  last_season: number
+  drivers: number
+}
+
+export interface TeamList extends Coverage {
+  teams: TeamSummary[]
+}
+
+export interface MakeStarts {
+  make: string
+  starts: number
+}
+
+export interface TeamProfile extends Coverage {
+  slug: string
+  name: string
+  series_ids: number[]
+  first_season: number
+  last_season: number
+  record: StatRecord
+  championships: ChampionshipFinish[]
+  best_championship: ChampionshipFinish | null
+  fastest_lap: FastLap | null
+  seasons: SeasonRecord[]
+  drivers: DriverRecord[]
+  makes: MakeStarts[]
+}
+
+export interface FastestRace {
+  race_id: number
+  race_name: string | null
+  season: number
+  average_speed: number
+}
+
+export interface TrackSummary {
+  track_id: number
+  name: string | null
+  races: number
+  first_season: number
+  last_season: number
+  length_mi: number | null
+}
+
+export interface TrackList extends Coverage {
+  tracks: TrackSummary[]
+}
+
+export interface TrackProfile extends Coverage {
+  track_id: number
+  name: string | null
+  series_ids: number[]
+  races: number
+  first_season: number
+  last_season: number
+  length_mi: number | null
+  avg_cautions: number | null
+  avg_caution_laps: number | null
+  avg_lead_changes: number | null
+  avg_leaders: number | null
+  fastest_race: FastestRace | null
+  fastest_lap: FastLap | null
+  record: StatRecord
+  drivers: DriverRecord[]
+  teams: TeamRecord[]
+  /** Points races at the track, newest first. */
+  race_list: RaceSummary[]
+}

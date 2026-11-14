@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from collections import defaultdict
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session
 
 from ..models import Race, RaceDriverLapSummary, RaceResult, Track
@@ -16,6 +16,11 @@ EXHIBITION_RACE_TYPE = 2
 # A race with no results this long after its start is treated as over anyway
 # (results can lag, or never arrive for an abandoned race).
 LIVE_WINDOW = datetime.timedelta(hours=8)
+
+
+def is_points_race() -> ColumnElement[bool]:
+    """Filter for races that count for points: anything not marked an exhibition."""
+    return (Race.race_type_id != EXHIBITION_RACE_TYPE) | Race.race_type_id.is_(None)
 
 
 def list_seasons(session: Session) -> list[Season]:
@@ -44,6 +49,11 @@ def _aware(value: datetime.datetime | None) -> datetime.datetime | None:
     if value is not None and value.tzinfo is None:
         return value.replace(tzinfo=datetime.UTC)
     return value
+
+
+def track_length(distance: float | None, laps: int | None) -> float | None:
+    """Miles per lap, from a race's scheduled distance and laps."""
+    return round(distance / laps, 4) if distance and laps else None
 
 
 def _summaries(session: Session, races: list[tuple[Race, str | None]]) -> list[RaceSummary]:
@@ -103,7 +113,7 @@ def _round_numbers(session: Session, seasons: set[tuple[int, int]]) -> dict[int,
         select(Race.race_id, Race.race_season, Race.series_id)
         .where(
             Race.race_season.in_({season for season, _ in seasons}),
-            (Race.race_type_id != EXHIBITION_RACE_TYPE) | Race.race_type_id.is_(None),
+            is_points_race(),
         )
         .order_by(Race.race_date, Race.race_id)
     ).all()
@@ -120,12 +130,16 @@ def _base_query():
     return select(Race, Track.track_name).outerjoin(Track, Track.track_id == Race.track_id)
 
 
-def list_races(session: Session, year: int | None, series_id: int | None) -> list[RaceSummary]:
+def list_races(
+    session: Session, year: int | None, series_id: int | None, track_id: int | None = None
+) -> list[RaceSummary]:
     q = _base_query()
     if year is not None:
         q = q.where(Race.race_season == year)
     if series_id is not None:
         q = q.where(Race.series_id == series_id)
+    if track_id is not None:
+        q = q.where(Race.track_id == track_id)
     q = q.order_by(Race.race_date, Race.race_id)
     rows = [(race, track_name) for race, track_name in session.execute(q).all()]
     return _summaries(session, rows)
@@ -137,15 +151,13 @@ def get_race(session: Session, race_id: int) -> RaceDetail | None:
         return None
     race, track_name = row
     summary = _summaries(session, [(race, track_name)])[0]
-    laps = race.scheduled_laps or 0
+    laps = race.scheduled_laps
     return RaceDetail(
         **summary.model_dump(),
         stage_ends=stage_ends(
             [race.stage_1_laps, race.stage_2_laps, race.stage_3_laps, race.stage_4_laps]
         ),
-        track_length_mi=round(race.scheduled_distance / laps, 4)
-        if race.scheduled_distance and laps
-        else None,
+        track_length_mi=track_length(race.scheduled_distance, laps),
         scheduled_distance=race.scheduled_distance,
         number_of_cautions=race.number_of_cautions,
         number_of_caution_laps=race.number_of_caution_laps,

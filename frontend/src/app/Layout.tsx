@@ -1,8 +1,8 @@
 import * as Popover from '@radix-ui/react-popover'
 import { clsx } from 'clsx'
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
-import { Fragment, useState } from 'react'
-import { Link, NavLink, Outlet, useMatch, useNavigate, useSearchParams } from 'react-router'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router'
 
 import { useReplayRace, useSeasons, useSeriesRaces } from '../api/client'
 import { CommandPalette } from '../features/picker/CommandPalette'
@@ -12,32 +12,36 @@ import { SERIES, seriesName } from '../lib/racing'
 
 export function Layout() {
   const [paletteOpen, setPaletteOpen] = useState(false)
-  // On phones, show the breadcrumb on the replay screen and the page links elsewhere.
+  // Below lg there's only room for one of the page links and the breadcrumb: the replay screen keeps
+  // its breadcrumb, and the other pages keep their links.
   const onReplay = useMatch('/replay/:raceId') != null
-  const season = useSeasonQuery()
+  // The year and series breadcrumb belongs to the pages that show one season.
+  const seasonal = [useMatch('/'), useMatch('/races'), useMatch('/standings')].some(Boolean) || onReplay
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-bg/80 px-4 backdrop-blur">
-        <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-bg/80 px-4 backdrop-blur">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5 font-bold tracking-tight">
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
           <span className="sr-only sm:not-sr-only">{APP_NAME}</span>
         </Link>
-        <nav className={clsx('items-center gap-1 text-sm', onReplay ? 'hidden sm:flex' : 'flex')} aria-label="Pages">
-          <PageLink to={`/races${season}`}>Races</PageLink>
-          <PageLink to={`/standings${season}`}>Standings</PageLink>
-        </nav>
-        <span className={clsx('h-5 w-px shrink-0 bg-line', !onReplay && 'hidden sm:block')} aria-hidden />
-        <div className={clsx('min-w-0', !onReplay && 'hidden sm:block')}>
-          <Breadcrumb />
-        </div>
+        <PageNav className={onReplay ? 'hidden lg:flex' : 'flex'} />
+        {seasonal && (
+          <>
+            <span className="hidden h-5 w-px shrink-0 bg-line lg:block" aria-hidden />
+            <div className={clsx('min-w-0', !onReplay && 'hidden lg:block')}>
+              <Breadcrumb />
+            </div>
+          </>
+        )}
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
-          className="ml-auto flex items-center gap-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs text-faint transition hover:border-line-strong hover:text-muted"
+          className="ml-auto flex shrink-0 items-center gap-2 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs text-faint transition hover:border-line-strong hover:text-muted"
+          aria-label="Search races"
         >
           <Search size={14} />
-          <span className="hidden md:inline">Search races</span>
-          <kbd className="hidden rounded border border-line px-1 font-mono text-[10px] md:inline">Ctrl K</kbd>
+          <span className="hidden xl:inline">Search races</span>
+          <kbd className="hidden rounded border border-line px-1 font-mono text-[10px] xl:inline">Ctrl K</kbd>
         </button>
       </header>
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden">
@@ -50,13 +54,47 @@ export function Layout() {
   )
 }
 
-/** `?year=&series=` for the season being viewed: the replayed race's, or the page's own. */
-function useSeasonQuery(): string {
+/** `?year=&series=` and `?series=` for the season or series being viewed: the replayed race's, or the page's own. */
+function useViewedQueries(): { season: string; series: string } {
   const replay = useMatch('/replay/:raceId')
   const race = useReplayRace(replay ? Number(replay.params.raceId) : undefined)
   const [params] = useSearchParams()
-  if (replay && race.data) return `?year=${race.data.season}&series=${race.data.series_id}`
-  return params.get('year') ? `?${params}` : ''
+  const year = replay ? race.data?.season : Number(params.get('year')) || undefined
+  const series = replay ? race.data?.series_id : Number(params.get('series')) || undefined
+  const seriesQuery = series ? `?series=${series}` : ''
+  return {
+    season: year ? `?year=${year}${series ? `&series=${series}` : ''}` : seriesQuery,
+    series: seriesQuery,
+  }
+}
+
+/** Links to every page. On narrow screens it scrolls sideways, keeping the current page in view. */
+function PageNav({ className }: { className: string }) {
+  const { season, series } = useViewedQueries()
+  const { pathname } = useLocation()
+  const nav = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const reveal = () => nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    reveal()
+    // Link widths change once the web font loads.
+    void document.fonts.ready.then(reveal)
+  }, [pathname])
+  return (
+    <nav
+      ref={nav}
+      className={clsx(
+        'no-scrollbar min-w-0 items-center gap-0.5 overflow-x-auto text-sm sm:gap-1',
+        className,
+      )}
+      aria-label="Pages"
+    >
+      <PageLink to={`/races${season}`}>Races</PageLink>
+      <PageLink to={`/standings${season}`}>Standings</PageLink>
+      <PageLink to={`/drivers${series}`}>Drivers</PageLink>
+      <PageLink to={`/teams${series}`}>Teams</PageLink>
+      <PageLink to={`/tracks${series}`}>Tracks</PageLink>
+    </nav>
+  )
 }
 
 function PageLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -64,7 +102,7 @@ function PageLink({ to, children }: { to: string; children: React.ReactNode }) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        clsx('rounded-md px-2 py-1 font-medium transition hover:bg-raised', isActive ? 'text-ink' : 'text-faint hover:text-muted')
+        clsx('shrink-0 rounded-md px-2 py-1 font-medium transition hover:bg-raised', isActive ? 'text-ink' : 'text-faint hover:text-muted')
       }
     >
       {children}

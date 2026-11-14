@@ -223,3 +223,183 @@ class ReplayBundle(BaseModel):
     penalties: list[Penalty]
     notes: list[LapNote]
     stage_results: list[StageResult]
+
+
+class Record(BaseModel):
+    """Results across a set of points-race starts."""
+
+    starts: int
+    wins: int
+    # Top 3 finishes.
+    podiums: int
+    top_5: int
+    top_10: int
+    poles: int
+    pole_wins: int
+    laps_led: int
+    laps_completed: int
+    # Starts in which the car led at least one lap.
+    races_led: int
+    # Starts not running at the finish, and those ended by a crash.
+    dnfs: int
+    crashes: int
+    avg_start: float | None
+    avg_finish: float | None
+    # Starting position of the win that came from furthest back.
+    deepest_win_start: int | None
+
+
+class FastLap(BaseModel):
+    """The fastest single lap in a set of races, by average lap speed."""
+
+    speed_mph: float
+    lap: int
+    race_id: int
+    race_name: str | None
+    season: int
+    track_name: str | None
+    driver_id: int
+    driver_name: str | None
+
+
+class ChampionshipFinish(BaseModel):
+    season: int
+    position: int
+    driver_id: int
+    driver_name: str | None
+
+
+class SeasonRecord(BaseModel):
+    season: int
+    record: Record
+    # Final standing, once the season is over: the driver's own, or the team's best driver.
+    championship: ChampionshipFinish | None
+    teams: list[str]
+
+
+class DriverRecord(BaseModel):
+    driver_id: int
+    name: str | None
+    record: Record
+
+
+class TeamRecord(BaseModel):
+    slug: str
+    name: str
+    record: Record
+
+
+class TrackRecord(BaseModel):
+    track_id: int
+    name: str | None
+    record: Record
+
+
+class MakeStarts(BaseModel):
+    make: str
+    starts: int
+
+
+class Coverage(BaseModel):
+    series_id: int
+    # The earliest season with results in the series: nothing before it is counted.
+    data_since: int | None
+
+
+class DriverSummary(DriverRecord):
+    first_season: int
+    last_season: int
+    team: str | None
+
+
+class DriverList(Coverage):
+    drivers: list[DriverSummary]
+
+
+class DriverProfile(Coverage):
+    driver_id: int
+    name: str | None
+    # The team of the driver's most recent start.
+    team: str | None
+    # Every series the driver has points-race starts in.
+    series_ids: list[int]
+    first_season: int
+    last_season: int
+    record: Record
+    championships: list[ChampionshipFinish]
+    best_championship: ChampionshipFinish | None
+    stage_wins: int
+    fastest_lap: FastLap | None
+    seasons: list[SeasonRecord]
+    teams: list[TeamRecord]
+    tracks: list[TrackRecord]
+
+
+class TeamSummary(TeamRecord):
+    first_season: int
+    last_season: int
+    drivers: int
+
+
+class TeamList(Coverage):
+    teams: list[TeamSummary]
+
+
+class TeamProfile(Coverage):
+    slug: str
+    name: str
+    series_ids: list[int]
+    first_season: int
+    last_season: int
+    record: Record
+    championships: list[ChampionshipFinish]
+    best_championship: ChampionshipFinish | None
+    fastest_lap: FastLap | None
+    seasons: list[SeasonRecord]
+    drivers: list[DriverRecord]
+    makes: list[MakeStarts]
+
+
+class RaceRef(BaseModel):
+    race_id: int
+    race_name: str | None
+    season: int
+
+
+class FastestRace(RaceRef):
+    average_speed: float
+
+
+class TrackSummary(BaseModel):
+    track_id: int
+    name: str | None
+    races: int
+    first_season: int
+    last_season: int
+    length_mi: float | None
+
+
+class TrackList(Coverage):
+    tracks: list[TrackSummary]
+
+
+class TrackProfile(Coverage):
+    track_id: int
+    name: str | None
+    series_ids: list[int]
+    races: int
+    first_season: int
+    last_season: int
+    length_mi: float | None
+    avg_cautions: float | None
+    avg_caution_laps: float | None
+    avg_lead_changes: float | None
+    avg_leaders: float | None
+    fastest_race: FastestRace | None
+    fastest_lap: FastLap | None
+    # Every start at the track, all drivers together.
+    record: Record
+    drivers: list[DriverRecord]
+    teams: list[TeamRecord]
+    # Points races at the track, newest first.
+    race_list: list[RaceSummary]

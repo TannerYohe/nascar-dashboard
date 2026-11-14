@@ -1,8 +1,8 @@
 # NasDash
 
-> **Work in progress.** The replay screen and championship standings are the first pages; more are coming.
+> **Work in progress.** The replay screen, championship standings and driver, team and track pages are the first pages; more are coming.
 
-A web app for exploring NASCAR seasons: replay any race and follow the championship standings. To replay a race, pick a season, series and race, then watch the field run lap by lap on a map of the track, with:
+A web app for exploring NASCAR seasons: replay any race, follow the championship standings, and look up any driver, team or track. To replay a race, pick a season, series and race, then watch the field run lap by lap on a map of the track, with:
 
 - the flag state, lap, stage, and laps to go
 - the running order, with gap to the leader or interval to the car ahead, last and best lap times, and pit stop counts
@@ -26,20 +26,26 @@ Penalties come from the official infraction records when present. They're also r
 
 The standings page charts every driver's championship position, gap to the leader or points after each race of a season, using the standings cadence stores after every race (`points_standing`). The playoff format comes from the schedule: several playoff rounds means the elimination playoffs (through 2025, with a reset and a cut each round), and a single round means the Chase (2026 on, one reset and no eliminations). Seeds are worked out from the first playoff race's points, less what each driver earned in it.
 
+## Drivers, teams and tracks
+
+`/drivers`, `/teams` and `/tracks` list everyone in a series with their record, and each one has a page of its own: starts, wins, podiums (top 3), top 5s and 10s, poles, laps led and average finish, the best championship finish, the fastest lap, crash and DNF rates, and season, track, team or driver breakdowns. Only points races count. A crash is a finishing status of accident, crash or DVP, and a DNF is any status other than running. The feed has no team ids, so a team is every team name that reduces to the same slug. Lap speeds over 215 mph are treated as timing glitches. Every page says which season the data starts in, since nothing before it is counted.
+
 ## Layout
 
 ```
 backend/          Litestar API (Python 3.14, uv)
   src/nascar_dashboard/
     models.py       read-only models of the cadence tables
-    services/       race listings, replay bundle, flag timeline, penalty parsing, standings
-    routes/         /api/seasons, /api/races, /api/races/{id}, /api/races/{id}/replay, /api/standings
+    services/       race listings, replay bundle, flag timeline, penalty parsing, standings, records
+    routes/         /api/seasons, /api/races, /api/races/{id}, /api/races/{id}/replay, /api/standings,
+                    /api/drivers, /api/teams, /api/tracks (and /{id} for each)
   scripts/seed_dev_db.py   load races from the public NASCAR feed into SQLite
   tests/
 frontend/         React + TypeScript (Vite, Tailwind, TanStack Query, zustand)
   src/features/replay/     replay screen; engine/ is the timing model (unit tested)
   src/features/picker/     race browser and Ctrl-K search
   src/features/standings/  championship standings across a season
+  src/features/stats/      shared pieces of the driver, team and track pages (drivers/, teams/, tracks/)
   public/tracks/           track layouts, generated from OpenStreetMap
 scripts/tracks/   builds the track layouts (tracks.toml + build_tracks.py)
 ```
