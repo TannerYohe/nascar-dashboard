@@ -254,11 +254,15 @@ def test_track_crash_rate(client: TestClient) -> None:
     assert (record["crashes"], record["dnfs"]) == (1, 2)
 
 
-def test_exhibitions_are_not_counted(client: TestClient) -> None:
+def test_exhibitions_are_not_counted(client: TestClient, db: sessionmaker[Session]) -> None:
+    with db() as session:
+        session.add(RaceLap(race_id=99, driver_id=1, lap=1, lap_speed=160.0))
+        session.commit()
     drivers = get(client, "/api/drivers", series=1)
     assert drivers["data_since"] == 2023
     alpha = get(client, "/api/drivers/1")
     assert alpha["record"]["wins"] == 2 and alpha["first_season"] == 2023
+    assert (alpha["fastest_lap"]["race_id"], alpha["fastest_lap"]["speed_mph"]) == (500, 150.5)
     assert get(client, "/api/tracks/1")["races"] == 2
 
 

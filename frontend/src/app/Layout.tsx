@@ -61,9 +61,10 @@ function useViewedQueries(): { season: string; series: string } {
   const [params] = useSearchParams()
   const year = replay ? race.data?.season : Number(params.get('year')) || undefined
   const series = replay ? race.data?.series_id : Number(params.get('series')) || undefined
+  const seriesQuery = series ? `?series=${series}` : ''
   return {
-    season: year ? `?year=${year}${series ? `&series=${series}` : ''}` : series ? `?series=${series}` : '',
-    series: series ? `?series=${series}` : '',
+    season: year ? `?year=${year}${series ? `&series=${series}` : ''}` : seriesQuery,
+    series: seriesQuery,
   }
 }
 

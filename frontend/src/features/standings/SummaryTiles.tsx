@@ -42,7 +42,7 @@ export function SummaryTiles({ standings: s }: { standings: SeasonStandings }) {
       />
       {s.format !== 'none' && (
         <Insight
-        compact
+          compact
           icon={<Crown size={13} />}
           label={s.regular_season_champion_id != null ? 'Regular season champion' : 'Regular season leader'}
           value={regular ? cleanName(regular.name) : '–'}
