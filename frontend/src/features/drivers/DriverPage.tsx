@@ -3,16 +3,17 @@ import { Link, useParams } from 'react-router'
 
 import { useDriver } from '../../api/client'
 import type { DriverProfile } from '../../api/types'
+import { Insight } from '../../components/Insight'
 import { useDocumentTitle } from '../../lib/brand'
-import { cleanName } from '../../lib/format'
+import { cleanName, plural } from '../../lib/format'
 import { seriesName } from '../../lib/racing'
 import { seasonColumns, teamColumns, trackColumns } from '../stats/columns'
 import { ChampionshipInsight, CrashInsight, FastLapInsight, StartToFinishInsight } from '../stats/insights'
 import { teamPath, trackPath } from '../stats/links'
-import { bestByAvgFinish, minStartsFor, ordinal, percent, plural, seasonSpan } from '../stats/model'
+import { bestByAvgFinish, minStartsFor, ordinal, percent, seasonSpan } from '../stats/model'
 import { ProfileFallback, ProfilePage } from '../stats/ProfilePage'
 import { StatsTable } from '../stats/StatsTable'
-import { Insight, InsightGrid, RecordTiles, Section } from '../stats/Tiles'
+import { InsightGrid, RecordTiles, Section } from '../stats/Tiles'
 import { useSeriesParam } from '../stats/useSeriesParam'
 
 /** One driver's record in a series: the numbers, what stands out, and season, track and team breakdowns. */
@@ -25,7 +26,7 @@ export function DriverPage() {
 
   if (!driver.data) return <ProfileFallback error={driver.error} noun="driver" />
   const d = driver.data
-  const latestTeam = d.teams.find((team) => d.seasons[0]?.teams.includes(team.name))
+  const latestTeam = d.teams.find((team) => team.name === d.team)
   return (
     <ProfilePage
       back={{ to: `/drivers?series=${d.series_id}`, label: 'Drivers' }}

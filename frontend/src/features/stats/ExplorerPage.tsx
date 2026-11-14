@@ -1,4 +1,3 @@
-import { clsx } from 'clsx'
 import { Search } from 'lucide-react'
 import { useState } from 'react'
 
@@ -19,8 +18,6 @@ interface Props<T> {
   /** Undefined while loading. */
   rows: T[] | undefined
   error: unknown
-  /** Still showing the previous series' rows while the new ones load. */
-  stale: boolean
   columns: Column<T>[]
   rowKey: (row: T) => string | number
   sortBy: string
@@ -30,7 +27,7 @@ interface Props<T> {
 
 /** A searchable, sortable list of everyone in a series, with the data-coverage note. */
 export function ExplorerPage<T>(props: Props<T>) {
-  const { title, description, noun, series, onSeries, since, rows: all, error, stale, columns, rowKey, sortBy, searchText } = props
+  const { title, description, noun, series, onSeries, since, rows: all, error, columns, rowKey, sortBy, searchText } = props
   const [query, setQuery] = useState('')
 
   useDocumentTitle(title)
@@ -71,7 +68,7 @@ export function ExplorerPage<T>(props: Props<T>) {
       ) : !all ? (
         <div className="mt-4 h-[32rem] animate-pulse rounded-xl bg-panel" />
       ) : (
-        <div className={clsx('mt-4 rounded-xl border border-line bg-panel transition-opacity', stale && 'opacity-50')}>
+        <div className="mt-4 rounded-xl border border-line bg-panel">
           <StatsTable
             key={series}
             rows={rows}

@@ -19,10 +19,6 @@ export function seasonSpan(first: number, last: number): string {
   return first === last ? String(first) : `${first}–${last}`
 }
 
-export function plural(n: number, word: string): string {
-  return `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`
-}
-
 /** Places gained from start to finish on average: positive means the car moved forward. */
 export function positionsGained(record: StatRecord): number | null {
   if (record.avg_start == null || record.avg_finish == null) return null

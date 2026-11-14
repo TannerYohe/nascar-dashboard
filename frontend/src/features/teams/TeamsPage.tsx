@@ -42,7 +42,6 @@ export function TeamsPage() {
       since={teams.data?.data_since}
       rows={teams.data?.teams}
       error={teams.error}
-      stale={teams.isPlaceholderData}
       columns={columns}
       rowKey={(t) => t.slug}
       sortBy="wins"

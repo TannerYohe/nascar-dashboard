@@ -24,27 +24,6 @@ export function RecordTiles({ record }: { record: StatRecord }) {
   )
 }
 
-interface InsightProps {
-  icon: React.ReactNode
-  label: string
-  value: React.ReactNode
-  detail?: React.ReactNode
-}
-
-/** One finding: a label, a headline value and a line of context. */
-export function Insight({ icon, label, value, detail }: InsightProps) {
-  return (
-    <div className="min-w-0 rounded-xl border border-line bg-panel p-4">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-2 truncate text-xl font-bold tracking-tight">{value}</div>
-      {detail && <div className="mt-0.5 text-xs leading-relaxed text-muted">{detail}</div>}
-    </div>
-  )
-}
-
 export function InsightGrid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
 }

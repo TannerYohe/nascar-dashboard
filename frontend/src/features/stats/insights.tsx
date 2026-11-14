@@ -2,10 +2,10 @@ import { ArrowUpRight, CarFront, Gauge, Trophy } from 'lucide-react'
 import { Link } from 'react-router'
 
 import type { ChampionshipFinish, FastLap, StatRecord } from '../../api/types'
-import { cleanName } from '../../lib/format'
+import { Insight } from '../../components/Insight'
+import { cleanName, plural } from '../../lib/format'
 import { replayPath } from './links'
-import { ordinal, percent, plural, positionsGained, signed } from './model'
-import { Insight } from './Tiles'
+import { ordinal, percent, positionsGained, signed } from './model'
 
 /** Titles won, or else the best final standing. */
 export function ChampionshipInsight({

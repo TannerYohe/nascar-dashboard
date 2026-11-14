@@ -42,7 +42,6 @@ export function TracksPage() {
       since={tracks.data?.data_since}
       rows={tracks.data?.tracks}
       error={tracks.error}
-      stale={tracks.isPlaceholderData}
       columns={columns}
       rowKey={(t) => t.track_id}
       sortBy="last"

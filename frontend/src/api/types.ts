@@ -279,6 +279,8 @@ export interface DriverList extends Coverage {
 export interface DriverProfile extends Coverage {
   driver_id: number
   name: string | null
+  /** The team of the driver's most recent start. */
+  team: string | null
   series_ids: number[]
   first_season: number
   last_season: number

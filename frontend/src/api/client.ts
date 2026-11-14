@@ -110,7 +110,7 @@ const STATS_STALE = 5 * 60 * 1000
 
 /** Everyone who has raced in a series, with their records. */
 export function useDrivers(series: number) {
-  return useQuery({ queryKey: ['drivers', series], queryFn: () => api.drivers(series), staleTime: STATS_STALE, placeholderData: (previous) => previous })
+  return useQuery({ queryKey: ['drivers', series], queryFn: () => api.drivers(series), staleTime: STATS_STALE })
 }
 
 /** A driver's records in `series`, or in the series they've raced most when it's undefined. */
@@ -119,7 +119,7 @@ export function useDriver(driverId: number, series: number | undefined) {
 }
 
 export function useTeams(series: number) {
-  return useQuery({ queryKey: ['teams', series], queryFn: () => api.teams(series), staleTime: STATS_STALE, placeholderData: (previous) => previous })
+  return useQuery({ queryKey: ['teams', series], queryFn: () => api.teams(series), staleTime: STATS_STALE })
 }
 
 export function useTeam(slug: string, series: number | undefined) {
@@ -127,7 +127,7 @@ export function useTeam(slug: string, series: number | undefined) {
 }
 
 export function useTracks(series: number) {
-  return useQuery({ queryKey: ['tracks', series], queryFn: () => api.tracks(series), staleTime: STATS_STALE, placeholderData: (previous) => previous })
+  return useQuery({ queryKey: ['tracks', series], queryFn: () => api.tracks(series), staleTime: STATS_STALE })
 }
 
 export function useTrack(trackId: number, series: number | undefined) {

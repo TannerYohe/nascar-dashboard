@@ -51,3 +51,8 @@ export function surname(name: string | null): string {
 export function cleanName(name: string | null): string {
   return (name ?? '').replace(NAME_MARKERS, '').replace(/\s+/g, ' ').trim()
 }
+
+/** 1, "win" -> "1 win"; 1200, "lap" -> "1,200 laps". */
+export function plural(n: number, word: string): string {
+  return `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`
+}

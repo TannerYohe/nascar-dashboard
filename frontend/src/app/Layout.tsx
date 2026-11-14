@@ -62,7 +62,7 @@ function useViewedQueries(): { season: string; series: string } {
   const year = replay ? race.data?.season : Number(params.get('year')) || undefined
   const series = replay ? race.data?.series_id : Number(params.get('series')) || undefined
   return {
-    season: year ? `?year=${year}${series ? `&series=${series}` : ''}` : '',
+    season: year ? `?year=${year}${series ? `&series=${series}` : ''}` : series ? `?series=${series}` : '',
     series: series ? `?series=${series}` : '',
   }
 }

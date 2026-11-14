@@ -43,7 +43,6 @@ export function DriversPage() {
       since={drivers.data?.data_since}
       rows={drivers.data?.drivers}
       error={drivers.error}
-      stale={drivers.isPlaceholderData}
       columns={columns}
       rowKey={(d) => d.driver_id}
       sortBy="wins"
