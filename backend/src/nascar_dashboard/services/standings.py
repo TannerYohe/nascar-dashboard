@@ -23,7 +23,7 @@ def playoff_format(races: list[RaceSummary]) -> PlayoffFormat:
     return "elimination" if len(rounds) > 1 else "chase"
 
 
-def _latest_runs(rows: list[PointsStanding]) -> dict[int, dict[int, PointsStanding]]:
+def latest_runs(rows: list[PointsStanding]) -> dict[int, dict[int, PointsStanding]]:
     """race_id -> driver_id -> standing, keeping only each race's latest run."""
     latest_run: dict[int, int] = {}
     for row in rows:
@@ -96,7 +96,7 @@ def season_standings(session: Session, year: int, series_id: int) -> SeasonStand
     rows = session.scalars(
         select(PointsStanding).where(PointsStanding.race_id.in_([r.race_id for r in races]))
     ).all()
-    by_race = _latest_runs(list(rows))
+    by_race = latest_runs(list(rows))
     through = max((i + 1 for i, r in enumerate(races) if r.race_id in by_race), default=0)
     snapshots = [by_race.get(r.race_id, {}) for r in races[:through]]
 
