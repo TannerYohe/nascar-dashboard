@@ -59,6 +59,14 @@ body {
   scrollbar-color: var(--color-line-strong) transparent;
 }
 
+/* Sideways scrollers that read as a row, like the page links on phones. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 input[type='range'].scrubber {
   appearance: none;
   background: transparent;
