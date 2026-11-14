@@ -1,6 +1,4 @@
-import { clsx } from 'clsx'
-
-import { SERIES } from '../../lib/racing'
+import { SeriesTabs } from '../../components/SeriesTabs'
 import { useSeasonParams } from './useSeasonParams'
 
 /** Series tabs and a season dropdown, bound to the URL. */
@@ -10,24 +8,7 @@ export function SeasonPicker() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex rounded-lg border border-line bg-panel p-0.5" role="tablist" aria-label="Series">
-        {SERIES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-selected={s.id === series}
-            onClick={() => update({ series: s.id })}
-            disabled={seriesInYear.size > 0 && !seriesInYear.has(s.id)}
-            className={clsx(
-              'rounded-md px-3 py-1.5 text-sm font-semibold transition disabled:opacity-30',
-              s.id === series ? 'bg-raised text-ink shadow' : 'text-faint hover:text-muted',
-            )}
-          >
-            {s.short}
-          </button>
-        ))}
-      </div>
+      <SeriesTabs value={series} onChange={(s) => update({ series: s })} available={seriesInYear.size > 0 ? seriesInYear : undefined} />
       <select
         value={year ?? ''}
         onChange={(e) => update({ year: Number(e.target.value) })}
