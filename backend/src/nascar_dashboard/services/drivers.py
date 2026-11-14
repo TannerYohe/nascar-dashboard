@@ -22,8 +22,8 @@ from .records import (
     final_standings,
     group_by,
     latest,
+    rank_key,
     ranked,
-    start_keys,
     starts_by_series,
     tally_by,
     tally_rows,
@@ -53,7 +53,7 @@ def list_drivers(session: Session, series_id: int) -> DriverList:
                 team=last.team_name,
             )
         )
-    drivers.sort(key=lambda d: (-d.record.wins, -d.record.top_10, -d.record.starts))
+    drivers.sort(key=lambda d: rank_key(d.record))
     return DriverList(
         series_id=series_id, data_since=data_since(session, series_id), drivers=drivers
     )
@@ -101,6 +101,7 @@ def driver_profile(session: Session, driver_id: int, series_id: int | None) -> D
         data_since=data_since(session, series),
         driver_id=driver_id,
         name=last.driver_fullname,
+        team=last.team_name,
         series_ids=sorted(starts),
         first_season=min(by_season),
         last_season=max(by_season),
@@ -108,7 +109,7 @@ def driver_profile(session: Session, driver_id: int, series_id: int | None) -> D
         championships=[f for f in mine.values() if f is not None and f.position == 1],
         best_championship=best_finish(f for f in mine.values() if f is not None),
         stage_wins=_stage_wins(session, series, driver_id),
-        fastest_lap=fastest_lap(session, start_keys(session, series, is_driver)),
+        fastest_lap=fastest_lap(session, series, is_driver),
         seasons=[
             SeasonRecord(
                 season=season,

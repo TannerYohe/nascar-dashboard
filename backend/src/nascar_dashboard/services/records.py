@@ -11,9 +11,9 @@ import re
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
-from sqlalchemy import ColumnElement, Row, case, func, select, tuple_
+from sqlalchemy import ColumnElement, Row, case, func, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from ..models import PointsStanding, Race, RaceLap, RaceResult, Track
@@ -117,6 +117,7 @@ def _tally_columns() -> tuple[ColumnElement[Any], ...]:
         func.count(start).label("start_count"),
         func.sum(finish).label("finish_sum"),
         func.max(case((finish == 1, start))).label("deepest_win_start"),
+        func.max(Race.race_date).label("last_race_date"),
     )
 
 
@@ -188,8 +189,10 @@ def group_by[K: Hashable](
 
 
 def latest(rows: Iterable[TallyRow]) -> TallyRow:
-    """The row from the latest season, preferring the one with the most starts."""
-    return max(rows, key=lambda row: (row.race_season, row.starts))
+    """The row holding the most recent race, preferring the one with the most starts."""
+    return max(
+        rows, key=lambda row: (row.last_race_date is not None, row.last_race_date, row.starts)
+    )
 
 
 def starts_by_series(session: Session, *filters: ColumnElement[bool]) -> dict[int, int]:
@@ -212,26 +215,29 @@ def choose_series(requested: int | None, starts: dict[int, int]) -> int | None:
     return ordered[0][0] if ordered else None
 
 
-def start_keys(
-    session: Session, series_id: int, *filters: ColumnElement[bool]
-) -> list[tuple[int, int]]:
-    """(race_id, driver_id) for every counted start matching `filters`."""
-    rows = session.execute(
-        select(RaceResult.race_id, RaceResult.driver_id)
-        .join(Race, Race.race_id == RaceResult.race_id)
-        .where(*_results_in(series_id), RaceResult.driver_id.is_not(None), *filters)
-    ).all()
-    return [(race_id, driver_id) for race_id, driver_id in rows if driver_id is not None]
-
-
-def fastest_lap(session: Session, starts: list[tuple[int, int]]) -> FastLap | None:
-    """The fastest timed lap in the given (race_id, driver_id) starts."""
-    if not starts:
-        return None
+def fastest_lap(session: Session, series_id: int, *filters: ColumnElement[bool]) -> FastLap | None:
+    """The fastest timed lap in the counted starts in `series_id` matching `filters`."""
     lap = session.execute(
-        select(RaceLap.race_id, RaceLap.driver_id, RaceLap.lap, RaceLap.lap_speed)
+        select(
+            RaceLap.race_id,
+            RaceLap.driver_id,
+            RaceLap.lap,
+            RaceLap.lap_speed,
+            Race.race_name,
+            Race.race_season,
+            Track.track_name,
+            RaceResult.driver_fullname,
+        )
+        .select_from(RaceLap)
+        .join(
+            RaceResult,
+            (RaceResult.race_id == RaceLap.race_id) & (RaceResult.driver_id == RaceLap.driver_id),
+        )
+        .join(Race, Race.race_id == RaceLap.race_id)
+        .outerjoin(Track, Track.track_id == Race.track_id)
         .where(
-            tuple_(RaceLap.race_id, RaceLap.driver_id).in_(starts),
+            *_results_in(series_id),
+            *filters,
             RaceLap.lap > 0,
             RaceLap.lap_speed <= MAX_PLAUSIBLE_SPEED_MPH,
         )
@@ -240,25 +246,15 @@ def fastest_lap(session: Session, starts: list[tuple[int, int]]) -> FastLap | No
     ).first()
     if lap is None:
         return None
-    race = session.execute(
-        select(Race.race_name, Race.race_season, Track.track_name)
-        .outerjoin(Track, Track.track_id == Race.track_id)
-        .where(Race.race_id == lap.race_id)
-    ).one()
-    driver_name = session.scalar(
-        select(RaceResult.driver_fullname)
-        .where(RaceResult.race_id == lap.race_id, RaceResult.driver_id == lap.driver_id)
-        .limit(1)
-    )
     return FastLap(
         speed_mph=lap.lap_speed,
         lap=lap.lap,
         race_id=lap.race_id,
-        race_name=race.race_name,
-        season=race.race_season,
-        track_name=race.track_name,
+        race_name=lap.race_name,
+        season=lap.race_season,
+        track_name=lap.track_name,
         driver_id=lap.driver_id,
-        driver_name=driver_name,
+        driver_name=lap.driver_fullname,
     )
 
 
@@ -303,11 +299,12 @@ def best_finish(finishes: Iterable[ChampionshipFinish]) -> ChampionshipFinish | 
 
 
 def data_since(session: Session, series_id: int) -> int | None:
-    """The earliest season with race results in the series."""
+    """The earliest season with counted results in the series."""
     return session.scalar(
         select(func.min(Race.race_season))
-        .join(RaceResult, RaceResult.race_id == Race.race_id)
-        .where(Race.series_id == series_id, RaceResult.finishing_position == 1)
+        .select_from(RaceResult)
+        .join(Race, Race.race_id == RaceResult.race_id)
+        .where(*_results_in(series_id))
     )
 
 
@@ -324,16 +321,34 @@ def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
+class Results(Protocol):
+    @property
+    def wins(self) -> int: ...
+    @property
+    def top_10(self) -> int: ...
+    @property
+    def starts(self) -> int: ...
+
+
+def rank_key(results: Results) -> tuple[int, int, int]:
+    """Sort key for leaderboards: most wins, then most top 10s, then most starts."""
+    return (-results.wins, -results.top_10, -results.starts)
+
+
 def ranked[T](items: Iterable[tuple[T, Tally]]) -> list[tuple[T, Tally]]:
-    """Most wins first, then most starts."""
-    return sorted(items, key=lambda item: (-item[1].wins, -item[1].starts))
+    return sorted(items, key=lambda item: rank_key(item[1]))
+
+
+def rows_by_team(rows: Iterable[TallyRow]) -> dict[str, list[TallyRow]]:
+    """Rows keyed by team name, grouped per team: every name sharing a slug."""
+    return group_by(
+        (r for r in rows if r.team_name and slugify(r.team_name)), lambda r: slugify(r.team_name)
+    )
 
 
 def team_records(rows: Iterable[TallyRow]) -> list[TeamRecord]:
-    """Rows keyed by team name and season, summed per team (every name sharing a slug)."""
-    by_team = group_by(
-        (r for r in rows if r.team_name and slugify(r.team_name)), lambda r: slugify(r.team_name)
-    )
+    """Rows keyed by team name, summed per team."""
+    by_team = rows_by_team(rows)
     return [
         TeamRecord(slug=slug, name=latest(by_team[slug]).team_name, record=tally.record())
         for slug, tally in ranked((slug, total(team_rows)) for slug, team_rows in by_team.items())

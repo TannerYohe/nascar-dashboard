@@ -28,7 +28,7 @@ The standings page charts every driver's championship position, gap to the leade
 
 ## Drivers, teams and tracks
 
-`/drivers`, `/teams` and `/tracks` list everyone in a series with their record, and each one has a page of its own: starts, wins, podiums (top 3), top 5s and 10s, poles, laps led and average finish, the best championship finish, the fastest lap, crash and DNF rates, and season, track, team or driver breakdowns. Only points races count. A crash is a finishing status of accident or DVP, and a DNF is any status other than running. The feed has no team ids, so a team is every team name that reduces to the same slug. Lap speeds over 215 mph are treated as timing glitches. Every page says which season the data starts in, since nothing before it is counted.
+`/drivers`, `/teams` and `/tracks` list everyone in a series with their record, and each one has a page of its own: starts, wins, podiums (top 3), top 5s and 10s, poles, laps led and average finish, the best championship finish, the fastest lap, crash and DNF rates, and season, track, team or driver breakdowns. Only points races count. A crash is a finishing status of accident, crash or DVP, and a DNF is any status other than running. The feed has no team ids, so a team is every team name that reduces to the same slug. Lap speeds over 215 mph are treated as timing glitches. Every page says which season the data starts in, since nothing before it is counted.
 
 ## Layout
 

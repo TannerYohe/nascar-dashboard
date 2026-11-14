@@ -319,6 +319,8 @@ class DriverList(Coverage):
 class DriverProfile(Coverage):
     driver_id: int
     name: str | None
+    # The team of the driver's most recent start.
+    team: str | None
     # Every series the driver has points-race starts in.
     series_ids: list[int]
     first_season: int

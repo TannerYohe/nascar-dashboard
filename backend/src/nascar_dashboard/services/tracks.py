@@ -24,7 +24,6 @@ from .records import (
     group_by,
     latest,
     ranked,
-    start_keys,
     starts_by_series,
     tally_rows,
     team_records,
@@ -78,17 +77,18 @@ def list_tracks(session: Session, series_id: int) -> TrackList:
 
 def track_profile(session: Session, track_id: int, series_id: int | None) -> TrackProfile | None:
     at_track = Race.track_id == track_id
-    series = choose_series(series_id, starts_by_series(session, at_track))
+    starts = starts_by_series(session, at_track)
+    series = choose_series(series_id, starts)
     races = _finished_races(session, series, at_track) if series is not None else []
     if series is None or not races:
         return None
 
+    # Results with no driver id still count towards the track's totals.
     driver_rows = tally_rows(
         session,
         series,
         [RaceResult.driver_id, RaceResult.driver_fullname, Race.race_season],
         at_track,
-        RaceResult.driver_id.is_not(None),
     )
     team_rows = tally_rows(
         session,
@@ -97,7 +97,7 @@ def track_profile(session: Session, track_id: int, series_id: int | None) -> Tra
         at_track,
         RaceResult.team_name.is_not(None),
     )
-    by_driver = group_by(driver_rows, lambda r: r.driver_id)
+    by_driver = group_by((r for r in driver_rows if r.driver_id is not None), lambda r: r.driver_id)
     fastest = max(
         (r for r in races if r.average_speed), key=lambda r: r.average_speed or 0, default=None
     )
@@ -108,7 +108,7 @@ def track_profile(session: Session, track_id: int, series_id: int | None) -> Tra
         data_since=data_since(session, series),
         track_id=track_id,
         name=track_names(session, [track_id]).get(track_id),
-        series_ids=sorted(starts_by_series(session, at_track)),
+        series_ids=sorted(starts),
         races=len(races),
         first_season=races[0].race_season,
         last_season=newest.race_season,
@@ -125,7 +125,7 @@ def track_profile(session: Session, track_id: int, series_id: int | None) -> Tra
         )
         if fastest and fastest.average_speed
         else None,
-        fastest_lap=fastest_lap(session, start_keys(session, series, at_track)),
+        fastest_lap=fastest_lap(session, series, at_track),
         record=total(driver_rows).record(),
         drivers=[
             DriverRecord(
@@ -139,6 +139,6 @@ def track_profile(session: Session, track_id: int, series_id: int | None) -> Tra
         race_list=[
             r
             for r in reversed(list_races(session, None, series, track_id))
-            if not r.is_exhibition and r.status == "finished"
+            if not r.is_exhibition and r.winner is not None
         ],
     )

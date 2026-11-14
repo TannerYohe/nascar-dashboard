@@ -29,9 +29,10 @@ from .records import (
     final_standings,
     group_by,
     latest,
+    rank_key,
     ranked,
+    rows_by_team,
     slugify,
-    start_keys,
     starts_by_series,
     tally_by,
     tally_rows,
@@ -47,9 +48,7 @@ def list_teams(session: Session, series_id: int) -> TeamList:
         RaceResult.team_name.is_not(None),
     )
     teams = []
-    for slug, team_rows in group_by(rows, lambda r: slugify(r.team_name)).items():
-        if not slug:
-            continue
+    for slug, team_rows in rows_by_team(rows).items():
         last = latest(team_rows)
         teams.append(
             TeamSummary(
@@ -61,7 +60,7 @@ def list_teams(session: Session, series_id: int) -> TeamList:
                 drivers=len({r.driver_id for r in team_rows if r.driver_id is not None}),
             )
         )
-    teams.sort(key=lambda t: (-t.record.wins, -t.record.top_10, -t.record.starts))
+    teams.sort(key=lambda t: rank_key(t.record))
     return TeamList(series_id=series_id, data_since=data_since(session, series_id), teams=teams)
 
 
@@ -148,7 +147,7 @@ def team_profile(session: Session, slug: str, series_id: int | None) -> TeamProf
         record=total(rows).record(),
         championships=[f for f in championships.values() if f.position == 1],
         best_championship=best_finish(championships.values()),
-        fastest_lap=fastest_lap(session, start_keys(session, series, is_team)),
+        fastest_lap=fastest_lap(session, series, is_team),
         seasons=[
             SeasonRecord(
                 season=season,
