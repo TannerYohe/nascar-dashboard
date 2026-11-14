@@ -1,6 +1,17 @@
 import { queryOptions, skipToken, useQuery } from '@tanstack/react-query'
 
-import type { RaceSummary, ReplayBundle, Season, SeasonStandings } from './types'
+import type {
+  DriverList,
+  DriverProfile,
+  RaceSummary,
+  ReplayBundle,
+  Season,
+  SeasonStandings,
+  TeamList,
+  TeamProfile,
+  TrackList,
+  TrackProfile,
+} from './types'
 
 export class ApiError extends Error {
   status: number
@@ -24,6 +35,12 @@ export const api = {
   races: (year?: number, series?: number) => get<RaceSummary[]>('/races', { year, series }),
   replay: (raceId: number) => get<ReplayBundle>(`/races/${raceId}/replay`),
   standings: (year: number, series: number) => get<SeasonStandings>('/standings', { year, series }),
+  drivers: (series: number) => get<DriverList>('/drivers', { series }),
+  driver: (driverId: number, series?: number) => get<DriverProfile>(`/drivers/${driverId}`, { series }),
+  teams: (series: number) => get<TeamList>('/teams', { series }),
+  team: (slug: string, series?: number) => get<TeamProfile>(`/teams/${encodeURIComponent(slug)}`, { series }),
+  tracks: (series: number) => get<TrackList>('/tracks', { series }),
+  track: (trackId: number, series?: number) => get<TrackProfile>(`/tracks/${trackId}`, { series }),
 }
 
 const HOUR = 60 * 60 * 1000
@@ -87,4 +104,32 @@ export function useStandings(year: number | undefined, series: number) {
     staleTime: 5 * 60 * 1000,
     placeholderData: (previous) => previous,
   })
+}
+
+const STATS_STALE = 5 * 60 * 1000
+
+/** Everyone who has raced in a series, with their records. */
+export function useDrivers(series: number) {
+  return useQuery({ queryKey: ['drivers', series], queryFn: () => api.drivers(series), staleTime: STATS_STALE, placeholderData: (previous) => previous })
+}
+
+/** A driver's records in `series`, or in the series they've raced most when it's undefined. */
+export function useDriver(driverId: number, series: number | undefined) {
+  return useQuery({ queryKey: ['driver', driverId, series], queryFn: () => api.driver(driverId, series), staleTime: STATS_STALE })
+}
+
+export function useTeams(series: number) {
+  return useQuery({ queryKey: ['teams', series], queryFn: () => api.teams(series), staleTime: STATS_STALE, placeholderData: (previous) => previous })
+}
+
+export function useTeam(slug: string, series: number | undefined) {
+  return useQuery({ queryKey: ['team', slug, series], queryFn: () => api.team(slug, series), staleTime: STATS_STALE })
+}
+
+export function useTracks(series: number) {
+  return useQuery({ queryKey: ['tracks', series], queryFn: () => api.tracks(series), staleTime: STATS_STALE, placeholderData: (previous) => previous })
+}
+
+export function useTrack(trackId: number, series: number | undefined) {
+  return useQuery({ queryKey: ['track', trackId, series], queryFn: () => api.track(trackId, series), staleTime: STATS_STALE })
 }
